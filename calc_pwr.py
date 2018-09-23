@@ -4,7 +4,7 @@ import sys
 import time
 import syslog
 from libby import mysqldose
-from libby import logger
+from libby.logger import logger
 
 logging = True
 
