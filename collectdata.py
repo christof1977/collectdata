@@ -14,7 +14,7 @@ import urllib.request
 
 
 
-configfile = '/home/heizung/collectdata.ini'
+configfile = '/home/heizung/collectdata/collectdata.ini'
 #logging = False
 logging = True
 logdata = True
@@ -102,10 +102,14 @@ class kollektor(threading.Thread):
                             logger("OekoCiStatus = 0", logdata)
                         self.db.write(now, "OekoCiRetTemp", float(d["circ1"]["L_ret_temp"])/10)
                         logger("OekoCiRetTemp = {}".format(str(float(d["circ1"]["L_ret_temp"])/10)), logdata)
+                        self.db.write(now, "OekoHkVlTempSet", float(d["hk1"]["L_flowtemp_set"])/10)
+                        logger("OekoHkVlTempSet = {} °C".format(str(float(d["hk1"]["L_flowtemp_set"])/10)), logdata)
+                        self.db.write(now, "OekoHkVlTempAct", float(d["hk1"]["L_flowtemp_act"])/10)
+                        logger("OekoHkVlTempAct = {} °C".format(str(float(d["hk1"]["L_flowtemp_act"])/10)), logdata)
                         #print(now)
                 except Exception as e:
                     logger("JSON error! "+str(e), logging)
-                self.t_stop.wait(60)
+                self.t_stop.wait(20)
 
             if self.t_stop.is_set():
                 logger("Ausgeloggt", logging)
