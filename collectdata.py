@@ -46,6 +46,9 @@ jsonfile = os.path.join(basepath, jsonfile)
 configfile = os.path.join(basepath, configfile)
 print(jsonfile)
 
+eth_addr = 'dose'
+udp_port = 6663
+
 class kollektor():
     def __init__(self):
         data = self.read_json(jsonfile)
@@ -57,6 +60,7 @@ class kollektor():
         self.collect_oekofendata()
         self.broadcast_value()
         self.udpRx()
+        self.udpServer()
         self.run()
 
     def read_json(self, jsonfile):
@@ -109,28 +113,32 @@ class kollektor():
             logging.info("Ausgeloggt")
 
     def fetch_oekofendata(self):
-        self.oekofendata = None
         self.fodTstop = threading.Event()
-        fodT = threading.Thread(target=self.f_oekofendata)
+        fodT = threading.Thread(target=self._fetch_oekofendata)
         fodT.setDaemon(True)
         fodT.start()
 
-    def f_oekofendata(self):
-        while(not self.fodTstop.is_set()):
-            try:
-                with urllib.request.urlopen(self.pelle) as response:
-                    data = response.read()
-                    self.oekofendata = json.loads(data.decode())
-            except Exception as e:
-                logging.error(str(e))
-            self.fodTstop.wait(oeko_interval)
+    def _fetch_oekofendata(self):
+        doit = True
+        if(doit):
+            while(not self.fodTstop.is_set()):
+                try:
+                    with urllib.request.urlopen(self.pelle) as response:
+                        data = response.read()
+                        self.oekofendata = json.loads(data.decode())
+                except Exception as e:
+                    logging.error(str(e))
+                self.fodTstop.wait(oeko_interval)
 
     def get_oekofendata(self):
         '''
         This function returns the json string from the Oekofen device, which is
         stored within this program.
         '''
-        return self.oekofendata
+        return json.dumps(self.oekofendata)
+
+    def get_umwaelzpumpe(self):
+        return self.oekofendata["hk1"]["L_pump"]
 
     def broadcast_value(self):
         self.bcastTstop = threading.Event()
@@ -141,6 +149,38 @@ class kollektor():
     def _broadcast_value(self):
         while(not self.bcastTstop.is_set()):
             self.bcastTstop.wait(1)
+
+    def udpServer(self):
+        self.udpSeTstop = threading.Event()
+        udpSeT = threading.Thread(target=self._udpServer)
+        udpSeT.setDaemon(True)
+        udpSeT.start()
+
+    def _udpServer(self):
+        udpSock = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM )
+        udpSock.bind((eth_addr,udp_port))
+        logging.info("Starting UDP Server %s:%s" % (eth_addr, udp_port))
+        while(not self.udpSeTstop.is_set()):
+            ready = select.select([udpSock], [], [], .1)
+            if ready[0]:
+                data, addr = udpSock.recvfrom(4096)
+                try:
+                    data = json.loads(data.decode())
+                except:
+                    logging.error("shit happens while decoding json string")
+                if("command" in data.keys()):
+                    ret = self.parse_command(data)
+                    print(ret)
+                    udpSock.sendto(str(ret).encode('utf-8'),addr)
+
+    def parse_command(self, data):
+        if(data["command"] == "getOekofendata"):
+            ret = self.get_oekofendata()
+            print(type(ret))
+            return(ret)
+        elif(data["command"] == "getUmwaelzpumpe"):
+            return self.get_umwaelzpumpe()
+
 
     def udpRx(self):
         self.udpRxTstop = threading.Event()
