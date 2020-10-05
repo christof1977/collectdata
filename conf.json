@@ -1,0 +1,224 @@
+{
+  "pelle":{
+    "OekoAussenTemp":{
+      "Name":"Aussentemperatur",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"system",
+      "oe_name":"L_ambient",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoPumpeWestDrehzahl":{
+      "Name":"Drehzahl Pumpe Solar Ost",
+      "Type":"Speed",
+      "Unit":"%",
+      "Factor":1,
+      "oe_level":"sk1",
+      "oe_name":"L_pump",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoPumpeOsttDrehzahl":{
+      "Name":"Drehzahl Pumpe Solar Ost",
+      "Type":"Speed",
+      "Unit":"%",
+      "Factor":1,
+      "oe_level":"sk3",
+      "oe_name":"L_pump",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoKollWestTemp":{
+      "Name":"Kollektortemperatur Solar West",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"sk1",
+      "oe_name":"L_koll_temp",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoKollOstTemp":{
+      "Name":"Kollektortemperatur Solar Ost",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"sk3",
+      "oe_name":"L_koll_temp",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoKollVorlaufTemp":{
+      "Name":"Vorlauftemperatur Solar",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"se2",
+      "oe_name":"L_flow_temp",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoKollRuecklaufTemp":{
+      "Name":"Rücklauftemperatur Solar",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"se2",
+      "oe_name":"L_ret_temp",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoKollRuecklaufDurchfluss":{
+      "Name":"Rücklauf Durchfluss Solar",
+      "Type":"Flow",
+      "Unit":"l/min",
+      "Factor":0.01,
+      "oe_level":"se2",
+      "oe_name":"L_flow",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoKollLeistung":{
+      "Name":"Kollektorleistung Solar",
+      "Type":"Power",
+      "Unit":"W",
+      "Factor":0.1,
+      "oe_level":"se2",
+      "oe_name":"L_pwr",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoSpUntenTemp":{
+      "Name":"Puffer Temperatur unten",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"sk3",
+      "oe_name":"L_spu",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoSpMitteTemp":{
+      "Name":"Puffer Temperatur mitte",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"pu1",
+      "oe_name":"L_tpm_act",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoSpObenTemp":{
+      "Name":"Puffer Temperatur oben",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"pu1",
+      "oe_name":"L_tpo_act",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoFeuerraumTemp":{
+      "Name":"Feuerraumtemperatur",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"pe1",
+      "oe_name":"L_frt_temp_act",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoKesselTemp":{
+      "Name":"Kesseltemperatur",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"pe1",
+      "oe_name":"L_temp_act",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoPeStatus":{
+      "Name":"Pelletronic Status",
+      "Type":"Status",
+      "Unit":"",
+      "Factor":0,
+      "oe_level":"pe1",
+      "oe_name":"L_state",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoPuPumpeDrehzahl":{
+      "Name":"Drehzahl Pufferladepumpe",
+      "Type":"Speed",
+      "Unit":"%",
+      "Factor":1,
+      "oe_level":"pu1",
+      "oe_name":"L_pump",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoCiRetTemp":{
+      "Name":"Rücklauftemperatur Zirkulation",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"circ1",
+      "oe_name":"L_ret_temp",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoCiStatus":{
+      "Name":"Status Zirkulationspumpe",
+      "Type":"Status",
+      "Unit":"",
+      "Factor":0,
+      "oe_level":"circ1",
+      "oe_name":"L_pummp",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoHkVlTempSet":{
+      "Name":"Vorlauf Soll Heizkreis 1",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"hk1",
+      "oe_name":"L_flowtemp_set",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoHkVlTempAct":{
+      "Name":"Vorlauf Ist Heizkreis 1",
+      "Type":"Temperature",
+      "Unit":"°C",
+      "Factor":0.1,
+      "oe_level":"hk1",
+      "oe_name":"L_flowtemp_act",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoStorageFill":{
+      "Name":"Füllstand Bunker",
+      "Type":"Mass",
+      "Unit":"kg",
+      "Factor":1,
+      "oe_level":"pe1",
+      "oe_name":"L_storage_fill",
+      "Comment":"",
+      "Store":1
+    },
+    "OekoStoragePopper":{
+      "Name":"Füllstand Zwischenbehälter",
+      "Type":"Mass",
+      "Unit":"kg",
+      "Factor":1,
+      "oe_level":"pe1",
+      "oe_name":"L_storage_popper",
+      "Comment":"",
+      "Store":1
+    }
+  }
+}
