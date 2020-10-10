@@ -68,7 +68,7 @@ class kollektor():
             data = json.load(fhd)
         return (data)
 
-    def write_value(self, timestamp, descr, value, unit, log=True, db=False):
+    def write_value(self, timestamp, descr, value, unit, log=True, db=True):
         if(db):
             self.db.write(timestamp, descr, value)
         if(log):
@@ -138,7 +138,8 @@ class kollektor():
         return json.dumps(self.oekofendata)
 
     def get_umwaelzpumpe(self):
-        return self.oekofendata["hk1"]["L_pump"]
+        ans = {"answer": self.oekofendata["hk1"]["L_pump"]}
+        return(json.dumps(ans))
 
     def broadcast_value(self):
         self.bcastTstop = threading.Event()
@@ -175,9 +176,7 @@ class kollektor():
 
     def parse_command(self, data):
         if(data["command"] == "getOekofendata"):
-            ret = self.get_oekofendata()
-            print(type(ret))
-            return(ret)
+            return self.get_oekofendata()
         elif(data["command"] == "getUmwaelzpumpe"):
             return self.get_umwaelzpumpe()
 
