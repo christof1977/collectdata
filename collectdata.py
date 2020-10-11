@@ -68,7 +68,7 @@ class kollektor():
             data = json.load(fhd)
         return (data)
 
-    def write_value(self, timestamp, descr, value, unit, log=True, db=True):
+    def write_value(self, timestamp, descr, value, unit, log=False, db=True):
         if(db):
             self.db.write(timestamp, descr, value)
         if(log):
@@ -135,6 +135,7 @@ class kollektor():
         This function returns the json string from the Oekofen device, which is
         stored within this program.
         '''
+        logging.info("Delivering Oekofendata")
         return json.dumps(self.oekofendata)
 
     def get_umwaelzpumpe(self):
@@ -171,7 +172,6 @@ class kollektor():
                     logging.error("shit happens while decoding json string")
                 if("command" in data.keys()):
                     ret = self.parse_command(data)
-                    print(ret)
                     udpSock.sendto(str(ret).encode('utf-8'),addr)
 
     def parse_command(self, data):
