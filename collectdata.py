@@ -120,6 +120,9 @@ class kollektor():
         fodT.start()
 
     def _fetch_oekofendata(self):
+        '''
+        Getting data from Oekofen Oven via JSON interface.
+        '''
         doit = True
         if(doit):
             while(not self.fodTstop.is_set()):
@@ -140,6 +143,9 @@ class kollektor():
         return json.dumps(self.oekofendata)
 
     def get_umwaelzpumpe(self):
+        '''
+        This funcion returns the state of the Umwaelzpumpe of HK1.
+        '''
         ans = {"answer": self.oekofendata["hk1"]["L_pump"]}
         return(json.dumps(ans))
 
@@ -184,6 +190,7 @@ class kollektor():
                     data = json.loads(data.decode())
                 except:
                     logging.error("shit happens while decoding json string")
+                logging.info(data)
                 if("command" in data.keys()):
                     ret = self.parse_command(data)
                     udpSock.sendto(str(ret).encode('utf-8'),addr)
@@ -193,6 +200,8 @@ class kollektor():
             return self.get_oekofendata()
         elif(data["command"] == "getUmwaelzpumpe"):
             return self.get_umwaelzpumpe()
+        elif(data["command"] == "getStoredValues"):
+            return json.dumps(self.measurements)
 
 
     def udpRx(self):
@@ -210,6 +219,8 @@ class kollektor():
         udpclient.bind(("", udpBcPort))
         udpclient.setblocking(0)
 
+        self.measurements = {}
+
         while(not self.udpRxTstop.is_set()):
             ready = select.select([udpclient], [], [], .1)
             if ready[0]:
@@ -219,13 +230,17 @@ class kollektor():
                     if("measurement" in message.keys()):
                         meas = message["measurement"]
                         for key in meas:
+                            value = float(meas[key]["Value"])
+                            unit = meas[key]["Unit"]
+                            timestamp = meas[key]["Timestamp"]
                             if(meas[key]["Store"] == 1):
                                 db = True
                             else:
                                 db = False
-                            self.write_value(meas[key]["Timestamp"],
-                                    key, float(meas[key]["Value"]),
-                                    meas[key]["Unit"], db=db)
+                            self.write_value(timestamp,
+                                    key, value, unit, db=db)
+                            self.measurements[key] = {"Value":value,
+                                    "Unit":unit, "Timestamp":timestamp}
                 except Exception as e:
                     logging.error(str(e))
 
