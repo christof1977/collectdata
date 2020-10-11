@@ -48,6 +48,7 @@ print(jsonfile)
 
 eth_addr = 'dose'
 udp_port = 6663
+udpBcPort =  6664
 
 class kollektor():
     def __init__(self):
@@ -188,27 +189,30 @@ class kollektor():
         udpRxT.start()
 
     def _udpRx(self):
-        port =  44445
-        logging.debug("Starting UDP client on port ", port)
+        logging.debug("Starting UDP client on port ", udpBcPort)
         udpclient = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, \
                 socket.IPPROTO_UDP)  # UDP
         udpclient.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         udpclient.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        udpclient.bind(("", port))
+        udpclient.bind(("", udpBcPort))
         udpclient.setblocking(0)
 
         while(not self.udpRxTstop.is_set()):
             ready = select.select([udpclient], [], [], .1)
             if ready[0]:
-                data, addr = udpclient.recvfrom(4096)
+                data, addr = udpclient.recvfrom(8192)
                 try:
                     message = json.loads(data.decode())
                     if("measurement" in message.keys()):
                         meas = message["measurement"]
                         for key in meas:
+                            if(meas[key]["Store"] == 1):
+                                db = True
+                            else:
+                                db = False
                             self.write_value(meas[key]["Timestamp"],
                                     key, float(meas[key]["Value"]),
-                                    meas[key]["Unit"])
+                                    meas[key]["Unit"], db=db)
                 except Exception as e:
                     logging.error(str(e))
 
