@@ -242,29 +242,6 @@ class kollektor():
         while True:
             time.sleep(.1)
 
-    def _run(self):
-        while True:
-            try:
-                data, addr = self.e_udp_sock.recvfrom( 1024 )# Puffer-Groesse ist 1024 Bytes. 
-                msg = data.decode('utf-8')
-                msg_spl = msg.split(",")
-                if (msg_spl[0]+msg_spl[1] in self.parameter):
-                    logging.info(msg_spl[0]+" "+msg_spl[1]+ " " + msg_spl[2] + " " + msg_spl[3])
-                    answer = 'Sensor OK'
-                    now = time.strftime('%Y-%m-%d %H:%M:%S')
-                    try:
-                        self.write_value(now, msg_spl[0]+msg_spl[1], msg_spl[2])
-                    except:
-                        logging.error("Error writing to database")
-                else:
-                    answer = 'Wrong Message'
-                self.e_udp_sock.sendto(answer.encode('utf-8'), addr)
-            except KeyboardInterrupt: # CTRL+C exit
-                logging.info("So long sucker!")
-                #self.t_stop.set()
-                self.stop()
-                #break
-
 if __name__ == "__main__":
     Kollektor = kollektor()
 
