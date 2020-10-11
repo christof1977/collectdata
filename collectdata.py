@@ -150,8 +150,21 @@ class kollektor():
         bcastT.start()
 
     def _broadcast_value(self):
+        udpSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        udpSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT,1)
+        udpSock.setsockopt(socket.SOL_SOCKET,socket.SO_BROADCAST, 1)
+        udpSock.settimeout(0.1)
         while(not self.bcastTstop.is_set()):
-            self.bcastTstop.wait(1)
+            try:
+                now = time.strftime('%Y-%m-%d %H:%M:%S')
+                message = {"measurement":{"tempOekoAussen":{"Name":"","Floor":"EG","Value":0,"Type":"Temperature","Unit":"°C","Timestamp":"","Store":0}}}
+                message["measurement"]["tempOekoAussen"]["Name"] = "Aussentemperatur Pelle"
+                message["measurement"]["tempOekoAussen"]["Value"] = round(float(self.oekofendata["system"]["L_ambient"])/10,1)
+                message["measurement"]["tempOekoAussen"]["Timestamp"] = now
+                udpSock.sendto(json.dumps(message).encode(),("<broadcast>",udpBcPort))
+            except Exception as e:
+                logging.error(str(e))
+            self.bcastTstop.wait(20)
 
     def udpServer(self):
         self.udpSeTstop = threading.Event()
