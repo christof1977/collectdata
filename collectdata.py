@@ -71,7 +71,11 @@ class kollektor():
 
     def write_value(self, timestamp, descr, value, unit, log=False, db=True):
         if(db):
-            self.db.write(timestamp, descr, value)
+            try:
+                self.db.write(timestamp, descr, value)
+            except Exception as e:
+                logging.error("While writing to database in \
+                    _collect_oekofendata:" + str(e))
         if(log):
             logging.info("{} = {} {}".format(descr, value, unit))
 
@@ -108,7 +112,7 @@ class kollektor():
                     unit = '{}'.format(c[key]["Unit"])
                     self.write_value(now, key, value, unit)
             except Exception as e:
-                logging.info("JSON error! "+str(e))
+                logging.error("JSON error! "+str(e))
             self.codTstop.wait(log_interval)
         if self.codTstop.is_set():
             logging.info("Ausgeloggt")
