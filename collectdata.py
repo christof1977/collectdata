@@ -215,7 +215,7 @@ class kollektor():
         udpRxT.start()
 
     def _udpRx(self):
-        logging.debug("Starting UDP client on port ", udpBcPort)
+        logging.debug("Starting UDP client on port %s" % udpBcPort)
         udpclient = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, \
                 socket.IPPROTO_UDP)  # UDP
         udpclient.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
