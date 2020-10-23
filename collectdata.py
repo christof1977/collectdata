@@ -1,136 +1,251 @@
 #!/usr/bin/env python3
+
+'''
+JSON Format for measurement values
+{
+"measurement":{
+  "tempFlur":{
+     "Name":" Temperatur Flur",
+     "Floor":"EG",
+     "Type":"Temperature",
+     "Value":"Einwert",
+     "Unit":"°C",
+     "Comment":"What's this?",
+     "Store":1,
+     "Timestamp":""
+    }
+  }
+}
+'''
+
+import os
 import socket
 import sys
 import time
 import configparser
 import syslog
 from libby import mysqldose
-from libby.logger import logger 
 import threading
 from threading import Thread
 import json
 import urllib
 import urllib.request
+import logging
+import select
 
+logging.basicConfig(level=logging.INFO)
 
+log_interval = 20
+oeko_interval = 20
 
-configfile = '/home/heizung/collectdata/collectdata.ini'
-#logging = False
-logging = True
-logdata = True
+jsonfile = "conf.json"
+configfile = "collectdata.ini"
+realpath = os.path.realpath(__file__)
+basepath = os.path.split(realpath)[0]
+jsonfile = os.path.join(basepath, jsonfile)
+configfile = os.path.join(basepath, configfile)
+print(jsonfile)
 
-#def logger(msg, logging=True):
-#    if logging == True:
-#        print(msg)
-#        syslog.syslog(str(msg))
+eth_addr = 'dose'
+udp_port = 6663
+udpBcPort =  6664
 
-
-class kollektor(threading.Thread):
+class kollektor():
     def __init__(self):
-        threading.Thread.__init__(self)
-        logger("Starting Kollektorthread as " + threading.currentThread().getName(), logging)
-        self.t_stop = threading.Event()
-        self.delay = .1
-
-        #self.parameters = ["Terrasse"]
+        data = self.read_json(jsonfile)
+        self.conf_pelle = data.pop("pelle")
         self.read_config()
-
-        #self.db = mysqlcollect(self.mysqluser, self.mysqlpass, self.mysqlserv, self.mysqldb)
         self.db = mysqldose.mysqldose(self.mysqluser, self.mysqlpass, self.mysqlserv, self.mysqldb)
+        self.fetch_oekofendata()
+        self.collect_oekofendata()
+        self.broadcast_value()
+        self.udpRx()
+        self.udpServer()
+        self.run()
 
-        
-        #self.mysql_success = False
-        self.db.start()
+    def read_json(self, jsonfile):
+        with open(jsonfile, "r") as fhd:
+            data = json.load(fhd)
+        return (data)
 
+    def write_value(self, timestamp, descr, value, unit, log=False, db=True):
+        if(db):
+            try:
+                self.db.write(timestamp, descr, value)
+            except Exception as e:
+                logging.error("While writing to database in \
+                    _collect_oekofendata:" + str(e))
+        if(log):
+            logging.info("{} = {} {}".format(descr, value, unit))
 
-        logger("Starting UDP-Server at " + self.basehost + ":" + str(self.baseport), logging)
-        self.e_udp_sock = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM ) 
-        self.e_udp_sock.bind( (self.basehost,self.baseport) ) 
-        
-        
-        #threading.Thread(target=self.threadwatcher).start()
-        #print(threading.enumerate())
+    def collect_oekofendata(self):
+        self.codTstop = threading.Event()
+        codT = threading.Thread(target=self._collect_oekofendata)
+        codT.setDaemon(True)
+        codT.start()
 
-        threading.Thread(target=self.collect_oekofen).start()
+    def _collect_oekofendata(self):
+        '''
+        Collecting data from Oekofen Oven and store the into database
+        '''
+        logging.info("Starting collection of Oekofen data thread as " + threading.currentThread().getName())
+        while(not self.codTstop.is_set()):
+            try:
+                now = time.strftime('%Y-%m-%d %H:%M:%S')
+                d = self.oekofendata
+                c = self.conf_pelle
+                for key in c:
+                    level = '{}'.format(c[key]["oe_level"])
+                    name = '{}'.format(c[key]["oe_name"])
+                    value =  d[level][name]
+                    factor = float(c[key]["Factor"])
+                    try:
+                        value = float(value)
+                        value =round(value * factor,1)
+                    except:
+                        pass
+                    if(value == "true" or value == "True"):
+                        value = 1
+                    elif(value == "false" or value == "False"):
+                        value = 0
+                    unit = '{}'.format(c[key]["Unit"])
+                    self.write_value(now, key, value, unit)
+            except Exception as e:
+                logging.error("JSON error! "+str(e))
+            self.codTstop.wait(log_interval)
+        if self.codTstop.is_set():
+            logging.info("Ausgeloggt")
 
-    def collect_oekofen(self):
-        #try:
-            logger("Starting collection of Oekofen data thread as " + threading.currentThread().getName(), logging)
-            while(not self.t_stop.is_set()):
+    def fetch_oekofendata(self):
+        self.fodTstop = threading.Event()
+        fodT = threading.Thread(target=self._fetch_oekofendata)
+        fodT.setDaemon(True)
+        fodT.start()
+
+    def _fetch_oekofendata(self):
+        '''
+        Getting data from Oekofen Oven via JSON interface.
+        '''
+        doit = True
+        if(doit):
+            while(not self.fodTstop.is_set()):
                 try:
                     with urllib.request.urlopen(self.pelle) as response:
-                        mydata = response.read()
-                        d = json.loads(mydata.decode())
-                        now = time.strftime('%Y-%m-%d %H:%M:%S')
-                        self.db.write(now, "OekoAussenTemp", float(d["system"]["L_ambient"])/10)
-                        logger("OekoAussentemp = {} °C".format(float(d["system"]["L_ambient"])/10), logdata)
-                        self.db.write(now, "OekoPumpeWestDrehzahl", float(d["sk1"]["L_pump"]))
-                        logger("OekoPumpeWestDrehzahl = {} %".format(float(d["sk1"]["L_pump"])), logdata)
-                        self.db.write(now, "OekoPumpeOstDrehzahl", float(d["sk3"]["L_pump"]))
-                        logger("OekoPumpeOstDrehzahl = {} %".format(float(d["sk3"]["L_pump"])), logdata)
-                        self.db.write(now, "OekoKollWestTemp", float(d["sk1"]["L_koll_temp"])/10)
-                        logger("OekoKollWestTemp = {} °C".format(str(float(d["sk1"]["L_koll_temp"])/10)), logdata)
-                        self.db.write(now, "OekoKollOstTemp", float(d["sk3"]["L_koll_temp"])/10)
-                        logger("OekoKollOstTemp = {} °C".format(str(float(d["sk3"]["L_koll_temp"])/10)), logdata)
-                        self.db.write(now, "OekoKollVorlaufTemp", float(d["se2"]["L_flow_temp"])/10)
-                        logger("OekoKollVorlaufTemp = {} °C".format(str(float(d["se2"]["L_flow_temp"])/10)), logdata)
-                        self.db.write(now, "OekoKollRuecklaufTemp", float(d["se2"]["L_ret_temp"])/10)
-                        logger("OekoKollRuecklaufTemp = {} °C".format(str(float(d["se2"]["L_ret_temp"])/10)), logdata)
-                        self.db.write(now, "OekoKollRuecklaufDurchfluss", float(d["se2"]["L_flow"])/100)
-                        logger("OekoKollRuecklaufDurchfluss = {} l/min".format(str(float(d["se2"]["L_flow"])/100)), logdata)
-                        self.db.write(now, "OekoKollLeistung", float(d["se2"]["L_pwr"])/10)
-                        logger("OekoKollLeistung = {} kW".format(str(float(d["se2"]["L_pwr"])/10)), logdata)
-                        self.db.write(now, "OekoSpUntenTemp", float(d["sk3"]["L_spu"])/10)
-                        logger("OekoSpUntenTemp = {} °C".format(str(float(d["sk3"]["L_spu"])/10)), logdata)
-                        self.db.write(now, "OekoSpMitteTemp", float(d["pu1"]["L_tpm_act"])/10)
-                        logger("OekoSpMitteTemp = {} °C".format(str(float(d["pu1"]["L_tpm_act"])/10)), logdata)
-                        self.db.write(now, "OekoSpObenTemp", float(d["pu1"]["L_tpo_act"])/10)
-                        logger("OekoSpObenTemp = {} °C".format(str(float(d["pu1"]["L_tpo_act"])/10)), logdata)
-                        self.db.write(now, "OekoFeuerraumTemp", float(d["pe1"]["L_frt_temp_act"])/10)
-                        logger("OekoFeuerraumTemp = {} °C".format(str(float(d["pe1"]["L_frt_temp_act"])/10)), logdata)
-                        self.db.write(now, "OekoKesselTemp", float(d["pe1"]["L_temp_act"])/10)
-                        logger("OekoKesselTemp = {} °C".format(str(float(d["pe1"]["L_temp_act"])/10)), logdata)
-                        self.db.write(now, "OekoPeStatus", float(d["pe1"]["L_state"]))
-                        logger("OekoPeStatus = {}".format(str(float(d["pe1"]["L_state"]))), logdata)
-                        self.db.write(now, "OekoPuPumpeDrehzahl", float(d["pu1"]["L_pump"]))
-                        logger("OekoPuPumpeDrehzahl = {} %".format(str(float(d["pu1"]["L_pump"]))), logdata)
-                        if d["circ1"]["L_pummp"] == "true":
-                            self.db.write(now, "OekoCiStatus", 1)
-                            logger("OekoCiStatus = 1", logdata)
-                        else:
-                            self.db.write(now, "OekoCiStatus", 0)
-                            logger("OekoCiStatus = 0", logdata)
-                        self.db.write(now, "OekoCiRetTemp", float(d["circ1"]["L_ret_temp"])/10)
-                        logger("OekoCiRetTemp = {}".format(str(float(d["circ1"]["L_ret_temp"])/10)), logdata)
-                        self.db.write(now, "OekoHkVlTempSet", float(d["hk1"]["L_flowtemp_set"])/10)
-                        logger("OekoHkVlTempSet = {} °C".format(str(float(d["hk1"]["L_flowtemp_set"])/10)), logdata)
-                        self.db.write(now, "OekoHkVlTempAct", float(d["hk1"]["L_flowtemp_act"])/10)
-                        logger("OekoHkVlTempAct = {} °C".format(str(float(d["hk1"]["L_flowtemp_act"])/10)), logdata)
-                        #print(now)
+                        data = response.read()
+                        self.oekofendata = json.loads(data.decode())
                 except Exception as e:
-                    logger("JSON error! "+str(e), logging)
-                self.t_stop.wait(20)
+                    logging.error(str(e))
+                self.fodTstop.wait(oeko_interval)
 
-            if self.t_stop.is_set():
-                logger("Ausgeloggt", logging)
-        #except Exception as e:
-            #logger(e)
+    def get_oekofendata(self):
+        '''
+        This function returns the json string from the Oekofen device, which is
+        stored within this program.
+        '''
+        logging.info("Delivering Oekofendata")
+        return json.dumps(self.oekofendata)
+
+    def get_umwaelzpumpe(self):
+        '''
+        This funcion returns the state of the Umwaelzpumpe of HK1.
+        '''
+        ans = {"answer": self.oekofendata["hk1"]["L_pump"]}
+        return(json.dumps(ans))
+
+    def broadcast_value(self):
+        self.bcastTstop = threading.Event()
+        bcastT = threading.Thread(target=self._broadcast_value)
+        bcastT.setDaemon(True)
+        bcastT.start()
+
+    def _broadcast_value(self):
+        udpSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        udpSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT,1)
+        udpSock.setsockopt(socket.SOL_SOCKET,socket.SO_BROADCAST, 1)
+        udpSock.settimeout(0.1)
+        while(not self.bcastTstop.is_set()):
+            try:
+                now = time.strftime('%Y-%m-%d %H:%M:%S')
+                message = {"measurement":{"tempOekoAussen":{"Name":"","Floor":"EG","Value":0,"Type":"Temperature","Unit":"°C","Timestamp":"","Store":0}}}
+                message["measurement"]["tempOekoAussen"]["Name"] = "Aussentemperatur Pelle"
+                message["measurement"]["tempOekoAussen"]["Value"] = round(float(self.oekofendata["system"]["L_ambient"])/10,1)
+                message["measurement"]["tempOekoAussen"]["Timestamp"] = now
+                udpSock.sendto(json.dumps(message).encode(),("<broadcast>",udpBcPort))
+            except Exception as e:
+                logging.error(str(e))
+            self.bcastTstop.wait(20)
+
+    def udpServer(self):
+        self.udpSeTstop = threading.Event()
+        udpSeT = threading.Thread(target=self._udpServer)
+        udpSeT.setDaemon(True)
+        udpSeT.start()
+
+    def _udpServer(self):
+        udpSock = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM )
+        udpSock.bind((eth_addr,udp_port))
+        logging.info("Starting UDP Server %s:%s" % (eth_addr, udp_port))
+        while(not self.udpSeTstop.is_set()):
+            ready = select.select([udpSock], [], [], .1)
+            if ready[0]:
+                data, addr = udpSock.recvfrom(4096)
+                try:
+                    data = json.loads(data.decode())
+                except:
+                    logging.error("shit happens while decoding json string")
+                logging.info(data)
+                if("command" in data.keys()):
+                    ret = self.parse_command(data)
+                    udpSock.sendto(str(ret).encode('utf-8'),addr)
+
+    def parse_command(self, data):
+        if(data["command"] == "getOekofendata"):
+            return self.get_oekofendata()
+        elif(data["command"] == "getUmwaelzpumpe"):
+            return self.get_umwaelzpumpe()
+        elif(data["command"] == "getStoredValues"):
+            return json.dumps(self.measurements)
 
 
+    def udpRx(self):
+        self.udpRxTstop = threading.Event()
+        udpRxT = threading.Thread(target=self._udpRx)
+        udpRxT.setDaemon(True)
+        udpRxT.start()
 
-    def threadwatcher(self):
-        try:
-            logger("Starting Threadwatcherthread as " + threading.currentThread().getName(), logging)
-            while(not self.t_stop.is_set()):
-                enum = threading.enumerate()
-                for i in range(len(enum)):
-                    logger("[Threadwatcher]: " + str(enum[i]), logging)
-                self.t_stop.wait(10)
-            if self.t_stop.is_set():
-                logger("Ausgewatcht", logging)
-        except Exception as e:
-            logger(str(e),logging)
+    def _udpRx(self):
+        logging.debug("Starting UDP client on port %s" % udpBcPort)
+        udpclient = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, \
+                socket.IPPROTO_UDP)  # UDP
+        udpclient.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        udpclient.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        udpclient.bind(("", udpBcPort))
+        udpclient.setblocking(0)
 
+        self.measurements = {}
+
+        while(not self.udpRxTstop.is_set()):
+            ready = select.select([udpclient], [], [], .1)
+            if ready[0]:
+                data, addr = udpclient.recvfrom(8192)
+                try:
+                    message = json.loads(data.decode())
+                    if("measurement" in message.keys()):
+                        meas = message["measurement"]
+                        for key in meas:
+                            value = float(meas[key]["Value"])
+                            unit = meas[key]["Unit"]
+                            timestamp = meas[key]["Timestamp"]
+                            if(meas[key]["Store"] == 1):
+                                db = True
+                            else:
+                                db = False
+                            self.write_value(timestamp,
+                                    key, value, unit, db=db)
+                            self.measurements[key] = {"Value":value,
+                                    "Unit":unit, "Timestamp":timestamp}
+                except Exception as e:
+                    logging.error(str(e))
 
     def read_config(self):
         try:
@@ -144,56 +259,21 @@ class kollektor(threading.Thread):
             self.mysqldb = self.config['BASE']['Mysqldb']
             self.parameter = self.config['BASE']['Parameter'].split(',')
             self.pelle = self.config['BASE']['Pelle']
-            #print(self.pelle)
             print(self.parameter)
-
         except:
-            logger("Configuration error", logging)
-
-    
-
+            logging.error("Configuration error")
 
     def stop(self):
         self.t_stop.set()
         self.db.close()
-        logger("Kollektor: So long sucker!", logging)
-        #print(threading.enumerate())
+        logging.info("Kollektor: So long sucker!")
         exit()
-
 
     def run(self):
         while True:
-            try:
-                data, addr = self.e_udp_sock.recvfrom( 1024 )# Puffer-Groesse ist 1024 Bytes. 
-                #print(addr)
-                #print(data.decode('utf-8')) 
-                msg = data.decode('utf-8')
-                msg_spl = msg.split(",")
-                if (msg_spl[0]+msg_spl[1] in self.parameter):
-                    logger(msg_spl[0]+" "+msg_spl[1]+ " " + msg_spl[2] + " " + msg_spl[3], logging)
-                    answer = 'Sensor OK'
-                    now = time.strftime('%Y-%m-%d %H:%M:%S')
-                    try:
-                        self.db.write(now, msg_spl[0]+msg_spl[1], msg_spl[2])
-                    except:
-                        logger("Error writing to database", logging)
-                else:
-                    answer = 'Wrong Message'
-                self.e_udp_sock.sendto(answer.encode('utf-8'), addr)
-            except KeyboardInterrupt: # CTRL+C exit
-                logger("So long sucker!", logging)
-                #self.t_stop.set()
-                self.stop()
-                break
-
-
-
-
+            time.sleep(.1)
 
 if __name__ == "__main__":
-    kollektor = kollektor()
-    kollektor.start()
-    #kollektor.stop()
-    #print(threading.enumerate())
+    Kollektor = kollektor()
 
 
