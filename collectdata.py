@@ -56,7 +56,6 @@ class kollektor():
         self.conf_pelle = data.pop("pelle")
         self.read_config()
         self.db = mysqldose.mysqldose(self.mysqluser, self.mysqlpass, self.mysqlserv, self.mysqldb)
-        self.db.start()
         self.fetch_oekofendata()
         self.collect_oekofendata()
         self.broadcast_value()
