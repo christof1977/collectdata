@@ -20,7 +20,7 @@
       "Comment":"",
       "Store":1
     },
-    "OekoPumpeOsttDrehzahl":{
+    "OekoPumpeOstDrehzahl":{
       "Name":"Drehzahl Pumpe Solar Ost",
       "Type":"Speed",
       "Unit":"%",
