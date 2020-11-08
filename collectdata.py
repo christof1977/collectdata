@@ -55,7 +55,7 @@ class kollektor():
         data = self.read_json(jsonfile)
         self.conf_pelle = data.pop("pelle")
         self.read_config()
-        self.db = mysqldose.mysqldose(self.mysqluser, self.mysqlpass, self.mysqlserv, self.mysqldb)
+        self.db = mysqldose.Mysqldose(self.mysqluser, self.mysqlpass, self.mysqlserv, self.mysqldb)
         self.fetch_oekofendata()
         self.collect_oekofendata()
         self.broadcast_value()
