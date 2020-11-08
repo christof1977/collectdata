@@ -14,6 +14,7 @@ import subprocess
 configfile = '/home/heizung/collectdata/collectdata.ini'
 logging = False
 devices = ['sdb','sdc','sdd','sde']
+#devices = ['sdb','sdc','sdd']
 
 #def logger(msg):
 #    if logging == True:
@@ -50,18 +51,21 @@ class hddstatus(threading.Thread):
 
 
     def getstatus(self, device):
-        result = subprocess.check_output(["hdparm", "-C" ,"/dev/"+device])
+        try:
+            result = subprocess.check_output(["hdparm", "-C" ,"/dev/"+device])
+            now = time.strftime('%Y-%m-%d %H:%M:%S')
+            _result = result.decode()
+            if(_result.find("active") != -1):
+                logger(device + ": active")
+                self.db.write(now, device, 1)
+            if(_result.find("standby") != -1):
+                logger(device + ": sleeping")
+                self.db.write(now, device, 0)
+            #print(result)
+            return 1
+        except:
+            logger("Error reading status of " + device)
         #print("active: "+result.find("active"))
-        now = time.strftime('%Y-%m-%d %H:%M:%S')
-        _result = result.decode()
-        if(_result.find("active") != -1):
-            logger(device + ": active")
-            self.db.write(now, device, 1)
-        if(_result.find("standby") != -1):
-            logger(device + ": sleeping")
-            self.db.write(now, device, 0)
-        #print(result)
-        return 1
 
     def read_config(self):
         try:
