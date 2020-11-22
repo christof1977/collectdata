@@ -25,6 +25,7 @@ import time
 import configparser
 import syslog
 from libby import mysqldose
+from libby.remote import udpRemote
 import threading
 from threading import Thread
 import json
@@ -32,6 +33,7 @@ import urllib
 import urllib.request
 import logging
 import select
+import schedule
 
 logging.basicConfig(level=logging.INFO)
 
@@ -61,6 +63,7 @@ class kollektor():
         self.broadcast_value()
         self.udpRx()
         self.udpServer()
+        schedule.every().day.at("23:59").do(self.get_counter_values)
         self.run()
 
     def read_json(self, jsonfile):
@@ -258,6 +261,7 @@ class kollektor():
             self.mysqlserv = self.config['BASE']['Mysqlserv']
             self.mysqldb = self.config['BASE']['Mysqldb']
             self.parameter = self.config['BASE']['Parameter'].split(',')
+            self.controller = self.config['BASE']['Controller'].split(',')
             self.pelle = self.config['BASE']['Pelle']
             print(self.parameter)
         except:
@@ -269,9 +273,23 @@ class kollektor():
         logging.info("Kollektor: So long sucker!")
         exit()
 
+    def get_counter_values(self):
+        for controller in self.controller:
+            logging.info("Getting counter values from " + controller)
+            now = time.strftime('%Y-%m-%d %H:%M:%S')
+            try:
+                ret = udpRemote(json.dumps({"command":"getCounterValues"}), addr=controller, port=5005)
+                value = ret["Data"]["Energy"]["Value"]
+                unit = ret["Data"]["Energy"]["Unit"]
+                key = "VerbrauchHeizung"+ret["Floor"]
+                self.write_value(now, key, value, unit)
+            except:
+                logging.error("No answer from " + controller)
+
     def run(self):
         while True:
-            time.sleep(.1)
+            schedule.run_pending()
+            time.sleep(1)
 
 if __name__ == "__main__":
     Kollektor = kollektor()
