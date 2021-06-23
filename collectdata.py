@@ -208,7 +208,7 @@ class kollektor():
                     data = json.loads(data.decode())
                 except:
                     logging.error("shit happens while decoding json string")
-                logging.info(data)
+                logging.debug(data)
                 if("command" in data.keys()):
                     ret = self.parse_command(data)
                     udpSock.sendto(str(ret).encode('utf-8'),addr)
