@@ -36,6 +36,7 @@ import select
 import schedule
 
 logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.DEBUG)
 
 log_interval = 20
 oeko_interval = 20
@@ -48,7 +49,7 @@ jsonfile = os.path.join(basepath, jsonfile)
 configfile = os.path.join(basepath, configfile)
 print(jsonfile)
 
-eth_addr = 'dose'
+eth_addr = 'dose.home'
 udp_port = 6663
 udpBcPort =  6664
 
@@ -145,15 +146,26 @@ class kollektor():
         This function returns the json string from the Oekofen device, which is
         stored within this program.
         '''
-        logging.info("Delivering Oekofendata")
-        return json.dumps(self.oekofendata)
+        try:
+            logging.info("Delivering Oekofendata")
+            return json.dumps(self.oekofendata)
+        except:
+            logging.error("An error occured while trying to deliver oekofendata")
+            ans = {"answer": "An error occured while trying to deliver oekofendata"}
+            return(json.dumps(ans))
+
 
     def get_umwaelzpumpe(self):
         '''
         This funcion returns the state of the Umwaelzpumpe of HK1.
         '''
-        ans = {"answer": self.oekofendata["hk1"]["L_pump"]}
-        return(json.dumps(ans))
+        try:
+            ans = {"answer": self.oekofendata["hk1"]["L_pump"]}
+            return(json.dumps(ans))
+        except:
+            logging.error("An error occured while trying to deliver state of the famous umwaelzpumpe")
+            ans = {"answer": "An error occured while trying to deliver state of the famous umwaelzpumpe"}
+            return(json.dumps(ans))
 
     def broadcast_value(self):
         self.bcastTstop = threading.Event()
