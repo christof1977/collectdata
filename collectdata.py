@@ -35,8 +35,11 @@ import logging
 import select
 import schedule
 
-logging.basicConfig(level=logging.INFO)
-#logging.basicConfig(level=logging.DEBUG)
+
+logger = logging.getLogger('Kollektor')
+#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
+
 
 log_interval = 20
 oeko_interval = 20
@@ -77,10 +80,10 @@ class kollektor():
             try:
                 self.db.write(timestamp, descr, value)
             except Exception as e:
-                logging.error("While writing to database in \
+                logger.error("While writing to database in \
                     _collect_oekofendata:" + str(e))
         if(log):
-            logging.info("{} = {} {}".format(descr, value, unit))
+            logger.info("{} = {} {}".format(descr, value, unit))
 
     def collect_oekofendata(self):
         self.codTstop = threading.Event()
@@ -92,7 +95,7 @@ class kollektor():
         '''
         Collecting data from Oekofen Oven and store the into database
         '''
-        logging.info("Starting collection of Oekofen data thread as " + threading.currentThread().getName())
+        logger.info("Starting collection of Oekofen data thread as " + threading.currentThread().getName())
         while(not self.codTstop.is_set()):
             try:
                 now = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -115,10 +118,10 @@ class kollektor():
                     unit = '{}'.format(c[key]["Unit"])
                     self.write_value(now, key, value, unit)
             except Exception as e:
-                logging.error("JSON error! "+str(e))
+                logger.error("JSON error! "+str(e))
             self.codTstop.wait(log_interval)
         if self.codTstop.is_set():
-            logging.info("Ausgeloggt")
+            logger.info("Ausgeloggt")
 
     def fetch_oekofendata(self):
         self.fodTstop = threading.Event()
@@ -138,7 +141,7 @@ class kollektor():
                         data = response.read()
                         self.oekofendata = json.loads(data.decode())
                 except Exception as e:
-                    logging.error(str(e))
+                    logger.error(str(e))
                 self.fodTstop.wait(oeko_interval)
 
     def get_oekofendata(self):
@@ -147,10 +150,10 @@ class kollektor():
         stored within this program.
         '''
         try:
-            logging.info("Delivering Oekofendata")
+            logger.info("Delivering Oekofendata")
             return json.dumps(self.oekofendata)
         except:
-            logging.error("An error occured while trying to deliver oekofendata")
+            logger.error("An error occured while trying to deliver oekofendata")
             ans = {"answer": "An error occured while trying to deliver oekofendata"}
             return(json.dumps(ans))
 
@@ -163,7 +166,7 @@ class kollektor():
             ans = {"answer": self.oekofendata["hk1"]["L_pump"]}
             return(json.dumps(ans))
         except:
-            logging.error("An error occured while trying to deliver state of the famous umwaelzpumpe")
+            logger.error("An error occured while trying to deliver state of the famous umwaelzpumpe")
             ans = {"answer": "An error occured while trying to deliver state of the famous umwaelzpumpe"}
             return(json.dumps(ans))
 
@@ -187,7 +190,7 @@ class kollektor():
                 message["measurement"]["tempOekoAussen"]["Timestamp"] = now
                 udpSock.sendto(json.dumps(message).encode(),("<broadcast>",udpBcPort))
             except Exception as e:
-                logging.error(str(e))
+                logger.error(str(e))
             self.bcastTstop.wait(20)
 
     def udpServer(self):
@@ -198,8 +201,9 @@ class kollektor():
 
     def _udpServer(self):
         udpSock = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM )
+        udpSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         udpSock.bind((eth_addr,udp_port))
-        logging.info("Starting UDP Server %s:%s" % (eth_addr, udp_port))
+        logger.info("Starting UDP Server %s:%s" % (eth_addr, udp_port))
         while(not self.udpSeTstop.is_set()):
             ready = select.select([udpSock], [], [], .1)
             if ready[0]:
@@ -207,8 +211,8 @@ class kollektor():
                 try:
                     data = json.loads(data.decode())
                 except:
-                    logging.error("shit happens while decoding json string")
-                logging.debug(data)
+                    logger.error("shit happens while decoding json string")
+                logger.debug("{0} says {1}".format(addr, data))
                 if("command" in data.keys()):
                     ret = self.parse_command(data)
                     udpSock.sendto(str(ret).encode('utf-8'),addr)
@@ -223,13 +227,14 @@ class kollektor():
 
 
     def udpRx(self):
+        logger.debug("fuck")
         self.udpRxTstop = threading.Event()
         udpRxT = threading.Thread(target=self._udpRx)
         udpRxT.setDaemon(True)
         udpRxT.start()
 
     def _udpRx(self):
-        logging.debug("Starting UDP client on port %s" % udpBcPort)
+        logger.debug("Starting UDP client on port %s" % udpBcPort)
         udpclient = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, \
                 socket.IPPROTO_UDP)  # UDP
         udpclient.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
@@ -243,6 +248,7 @@ class kollektor():
             ready = select.select([udpclient], [], [], .1)
             if ready[0]:
                 data, addr = udpclient.recvfrom(8192)
+                logger.debug(data.decode())
                 try:
                     message = json.loads(data.decode())
                     if("measurement" in message.keys()):
@@ -260,7 +266,7 @@ class kollektor():
                             self.measurements[key] = {"Value":value,
                                     "Unit":unit, "Timestamp":timestamp}
                 except Exception as e:
-                    logging.error(str(e))
+                    logger.error(str(e))
 
     def read_config(self):
         try:
@@ -277,17 +283,17 @@ class kollektor():
             self.pelle = self.config['BASE']['Pelle']
             print(self.parameter)
         except:
-            logging.error("Configuration error")
+            logger.error("Configuration error")
 
     def stop(self):
         self.t_stop.set()
         self.db.close()
-        logging.info("Kollektor: So long sucker!")
+        logger.info("Kollektor: So long sucker!")
         exit()
 
     def get_counter_values(self):
         for controller in self.controller:
-            logging.info("Getting counter values from " + controller)
+            logger.info("Getting counter values from " + controller)
             now = time.strftime('%Y-%m-%d %H:%M:%S')
             try:
                 ret = udpRemote(json.dumps({"command":"getCounterValues"}), addr=controller, port=5005)
@@ -296,7 +302,7 @@ class kollektor():
                 key = "VerbrauchHeizung"+ret["Floor"]
                 self.write_value(now, key, value, unit)
             except:
-                logging.error("No answer from " + controller)
+                logger.error("No answer from " + controller)
 
     def run(self):
         while True:
