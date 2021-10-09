@@ -6,6 +6,7 @@ import argparse
 import json
 import sdm_modbus
 import time
+import datetime
 import logging
 import threading
 from threading import Thread
@@ -92,10 +93,11 @@ class readSdm72(threading.Thread):
         of display or storage.
         '''
         logger.info("Starting UDP Sensor Broadcasting Thread" + threading.currentThread().getName())
-        cnt = 1
+        ts_null = datetime.datetime.now()
         while(not self.bcastTstop.is_set()):
             try:
                 now = time.strftime('%Y-%m-%d %H:%M:%S')
+                ts = datetime.datetime.now()
                 self.sensor_values["EgStromLeistung"]["Value"] = round(self.meter_eg.read("total_system_power"), 3)
                 self.sensor_values["EgStromLeistung"]["Timestamp"] = now
                 self.sensor_values["EgStromEnergie"]["Value"] = round(self.meter_eg.read("total_import_kwh"), 3)
@@ -110,13 +112,12 @@ class readSdm72(threading.Thread):
                 self.sensor_values["OgStromEnergie"]["Timestamp"] = now
 
                 #print("{a:2.3f}W | {b:2.3f}kWh || {c:2.3f}W | {d:2.3f}kWh || {e:2.3f}W | {f:2.3f}kWh".format(a=p_eg, b=e_eg, c=p_allg, d=e_allg, e=p_og, f=e_og))
-                if(cnt == 20):
+                if((ts - ts_null).total_seconds() > 18):
                     store = 1
-                    cnt = 1
+                    print(ts)
+                    ts_null = datetime.datetime.now()
                 else:
                     store = 0
-                    cnt += 1
-                    logger.info(cnt)
                 for sensor in self.sensor_values:
                     message = {"measurement":{sensor:{"Value":0,"Floor":"","Type":"Power","Unit":"W","Timestamp":"","Store":store}}}
                     message["measurement"][sensor]["Floor"] = self.sensor_values[sensor]["Floor"]
