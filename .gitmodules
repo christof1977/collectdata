@@ -1,3 +1,6 @@
 [submodule "libby"]
 	path = libby
 	url = https://github.com/christof1977/libby.git
+[submodule "sdm_modbus"]
+	path = sdm_modbus
+	url = git@github.com:christof1977/sdm_modbus.git
