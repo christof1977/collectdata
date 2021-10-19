@@ -68,6 +68,7 @@ class kollektor():
         self.udpRx()
         self.udpServer()
         schedule.every().day.at("23:59").do(self.get_counter_values)
+        schedule.every().day.at("23:59").do(self.get_import_power)
         self.run()
 
     def read_json(self, jsonfile):
@@ -303,6 +304,24 @@ class kollektor():
                 self.write_value(now, key, value, unit)
             except:
                 logger.error("No answer from " + controller)
+
+    def get_import_power(self):
+        try:
+            json_string = json.dumps({"command":"getFloors"})
+            ret = udpRemote(json_string, addr="piesler", port=5009)
+            for floor in ret["Floors"]:
+                json_string = json.dumps({"command":"getImportPower","device":"current","floor":floor})
+                ret = udpRemote(json_string, addr="piesler", port=5009)
+                value = ret["Data"]["Energy"]["Value"]
+                unit = ret["Data"]["Energy"]["Unit"]
+                key = "VerbrauchStrom"+ret["Data"]["Floor"]
+                now = time.strftime('%Y-%m-%d %H:%M:%S')
+                self.write_value(now, key, value, unit)
+        except Exception as e:
+            logger.error("Error during reading import power")
+            #logger.error(e)
+
+
 
     def run(self):
         while True:
