@@ -92,7 +92,7 @@ class readSdm72(threading.Thread):
         self.timeout = 2
 
         self.floors = {"Eg":1, "Og":3, "Allg":2}
-        
+
         self.meter = {}
         self.meter["Eg"] = sdm_modbus.SDM72(
             device=self.device,
@@ -102,7 +102,7 @@ class readSdm72(threading.Thread):
             timeout=self.timeout,
             unit=self.floors["Eg"]
         )
-        
+
         self.meter["Allg"] = sdm_modbus.SDM72(parent=self.meter["Eg"], unit=self.floors["Allg"])
         self.meter["Og"] = sdm_modbus.SDM72(parent=self.meter["Eg"], unit=self.floors["Og"])
 
@@ -110,7 +110,7 @@ class readSdm72(threading.Thread):
         self.basehost = self.hostname + ".home"
         self.t_stop = threading.Event()
         self.udpServer()
-        self.udp = udp_broadcast.udpBroadcast() 
+        self.udp = udp_broadcast.udpBroadcast()
         self.broadcast_value()
         self.run()
 
@@ -167,7 +167,6 @@ class readSdm72(threading.Thread):
     def get_floors(self):
         logger.info(list(self.floors.keys()))
         return json.dumps({"Floors":list(self.floors.keys())})
-        
 
     def get_import_power(self, jcmd):
         '''
@@ -253,13 +252,11 @@ class readSdm72(threading.Thread):
                 self.stop()
                 break
 
-
     def stop(self):
         self.bcastTstop.set()
         logger.info("So long sucker!")
         sys.exit()
         return
-
 
 if __name__ == "__main__":
     read_sdm72 = readSdm72()
