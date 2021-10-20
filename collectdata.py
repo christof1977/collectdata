@@ -233,7 +233,7 @@ class kollektor():
     def get_alive(self):
         """ function to see, if we are alive
         """
-        logging.info("Alive and kicking!")
+        logging.debug("Alive and kicking!")
         return(json.dumps({"name":self.hostname,"answer":"Freilich"}))
 
     def udpRx(self):
