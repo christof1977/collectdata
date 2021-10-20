@@ -91,20 +91,20 @@ class readSdm72(threading.Thread):
         self.baud = 1200
         self.timeout = 2
 
-        self.floors = {"eg":1, "og":3, "allg":2}
+        self.floors = {"Eg":1, "Og":3, "Allg":2}
         
         self.meter = {}
-        self.meter["eg"] = sdm_modbus.SDM72(
+        self.meter["Eg"] = sdm_modbus.SDM72(
             device=self.device,
             stopbits=self.stopbits,
             parity=self.parity,
             baud=self.baud,
             timeout=self.timeout,
-            unit=self.floors["eg"]
+            unit=self.floors["Eg"]
         )
         
-        self.meter["allg"] = sdm_modbus.SDM72(parent=self.meter["eg"], unit=self.floors["allg"])
-        self.meter["og"] = sdm_modbus.SDM72(parent=self.meter["eg"], unit=self.floors["og"])
+        self.meter["Allg"] = sdm_modbus.SDM72(parent=self.meter["Eg"], unit=self.floors["Allg"])
+        self.meter["Og"] = sdm_modbus.SDM72(parent=self.meter["Eg"], unit=self.floors["Og"])
 
         self.hostname = socket.gethostname()
         self.basehost = self.hostname + ".home"
@@ -152,10 +152,17 @@ class readSdm72(threading.Thread):
                 ret = self.get_import_power(jcmd)
             elif(jcmd['command'] == "getFloors"):
                 ret = self.get_floors()
+            elif(jcmd['command'] == "getAlive"):
+                ret = self.get_alive()
         except Exception as e:
             logging.error(e)
             ret = json.dumps({"answer":"Error","Value":"Not a valid command"})
         return(ret)
+
+    def get_alive(self):
+        """ function to see, if we are alive
+        """
+        return(json.dumps({"name":self.hostname,"answer":"Freilich"}))
 
     def get_floors(self):
         logger.info(list(self.floors.keys()))
@@ -168,13 +175,14 @@ class readSdm72(threading.Thread):
         '''
         if(jcmd["device"] == "current"):
             data = {}
-            if(jcmd["floor"] in ["eg", "og", "allg"]):
+            data["Data"] = {}
+            if(jcmd["floor"] in ["Eg", "Og", "Allg"]):
                 logger.info("Reading values from SDM72, floor {}".format(jcmd["floor"]))
                 value = round(self.meter[jcmd["floor"]].read("total_import_kwh"), 3)
-                data["Energy"] = {"Value":value, "Unit": "kWh"}
-                data["Floor"] = jcmd["floor"]
-                data["Device"] = "SDM72"
-                data["Timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                data["Data"]["Energy"] = {"Value":value, "Unit": "kWh"}
+                data["Data"]["Floor"] = jcmd["floor"]
+                data["Data"]["Device"] = "SDM72"
+                data["Data"]["Timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             else:
                 data = {"answer":"Error","Value":"Not a valid floor"}
         else:
