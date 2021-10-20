@@ -52,12 +52,14 @@ jsonfile = os.path.join(basepath, jsonfile)
 configfile = os.path.join(basepath, configfile)
 print(jsonfile)
 
-eth_addr = 'dose.home'
+eth_addr = ''
 udp_port = 6663
 udpBcPort =  6664
 
 class kollektor():
     def __init__(self):
+        self.hostname = socket.gethostname()
+        self.basehost = self.hostname + ".home"
         data = self.read_json(jsonfile)
         self.conf_pelle = data.pop("pelle")
         self.read_config()
@@ -225,7 +227,14 @@ class kollektor():
             return self.get_umwaelzpumpe()
         elif(data["command"] == "getStoredValues"):
             return json.dumps(self.measurements)
+        elif(data['command'] == "getAlive"):
+            return self.get_alive()
 
+    def get_alive(self):
+        """ function to see, if we are alive
+        """
+        logging.info("Alive and kicking!")
+        return(json.dumps({"name":self.hostname,"answer":"Freilich"}))
 
     def udpRx(self):
         logger.debug("fuck")
