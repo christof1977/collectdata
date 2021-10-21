@@ -235,7 +235,6 @@ class readSdm72(threading.Thread):
                     for fl in ["Eg", "Allg"]:
                         for phase in [1,2,3]:
                             res = self.get_phase_value(floor=fl, phase=phase, meas="power_active")
-                            print(fl, res)
                             name = res["name"].replace(" ", "").replace("(", "").replace(")", "") + fl
                             val = res["value"]
                             unit = res["unit"]
