@@ -27,64 +27,6 @@ class readSdm72(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
 
-        self.sensor_values = {}
-        self.sensor_values["EgElPwrL1"] = {}
-        self.sensor_values["EgElPwrL1"]["Unit"] = "W"
-        self.sensor_values["EgElPwrL1"]["Type"] = "Power"
-        self.sensor_values["EgElPwrL1"]["Command"] = "p1_power_active"
-        self.sensor_values["EgElPwrL1"]["Floor"] = "EG"
-
-        self.sensor_values["EgElPwrL2"] = {}
-        self.sensor_values["EgElPwrL2"]["Unit"] = "W"
-        self.sensor_values["EgElPwrL2"]["Type"] = "Power"
-        self.sensor_values["EgElPwrL2"]["Command"] = "p2_power_active"
-        self.sensor_values["EgElPwrL2"]["Floor"] = "EG"
-
-        self.sensor_values["EgElPwrL3"] = {}
-        self.sensor_values["EgElPwrL3"]["Unit"] = "W"
-        self.sensor_values["EgElPwrL3"]["Type"] = "Power"
-        self.sensor_values["EgElPwrL3"]["Command"] = "p3_power_active"
-        self.sensor_values["EgElPwrL3"]["Floor"] = "EG"
-
-        self.sensor_values["EgElEnTot"] = {}
-        self.sensor_values["EgElEnTot"]["Unit"] = "kWh"
-        self.sensor_values["EgElEnTot"]["Type"] = "Energy"
-        self.sensor_values["EgElEnTot"]["Command"] = "total_import_kwh"
-        self.sensor_values["EgElEnTot"]["Floor"] = "EG"
-
-
-        self.sensor_values["AllgElPwrL1"] = {}
-        self.sensor_values["AllgElPwrL1"]["Unit"] = "W"
-        self.sensor_values["AllgElPwrL1"]["Type"] = "Power"
-        self.sensor_values["AllgElPwrL1"]["Command"] = "p1_power_active"
-        self.sensor_values["AllgElPwrL1"]["Floor"] = "Allg"
-
-        self.sensor_values["AllgElPwrL2"] = {}
-        self.sensor_values["AllgElPwrL2"]["Unit"] = "W"
-        self.sensor_values["AllgElPwrL2"]["Type"] = "Power"
-        self.sensor_values["AllgElPwrL2"]["Command"] = "p2_power_active"
-        self.sensor_values["AllgElPwrL2"]["Floor"] = "Allg"
-
-        self.sensor_values["AllgElPwrL3"] = {}
-        self.sensor_values["AllgElPwrL3"]["Unit"] = "W"
-        self.sensor_values["AllgElPwrL3"]["Type"] = "Power"
-        self.sensor_values["AllgElPwrL3"]["Command"] = "p3_power_active"
-        self.sensor_values["AllgElPwrL3"]["Floor"] = "Allg"
-
-        self.sensor_values["AllgElEnTot"] = {}
-        self.sensor_values["AllgElEnTot"]["Unit"] = "kWh"
-        self.sensor_values["AllgElEnTot"]["Type"] = "Energy"
-        self.sensor_values["AllgElEnTot"]["Command"] = "total_import_kwh"
-        self.sensor_values["AllgElEnTot"]["Floor"] = "Allg"
-
-
-        self.sensor_values["OgElEnTot"] = {}
-        self.sensor_values["OgElEnTot"]["Unit"] = "kWh"
-        self.sensor_values["OgElEnTot"]["Type"] = "Energy"
-        self.sensor_values["OgElEnTot"]["Command"] = "total_import_kwh"
-        self.sensor_values["OgElEnTot"]["Floor"] = "Og"
-
-
         self.device = "/dev/ttyAMA0"
         self.stopbits = 1
         self.parity = "N"
@@ -105,6 +47,8 @@ class readSdm72(threading.Thread):
 
         self.meter["Allg"] = sdm_modbus.SDM72(parent=self.meter["Eg"], unit=self.floors["Allg"])
         self.meter["Og"] = sdm_modbus.SDM72(parent=self.meter["Eg"], unit=self.floors["Og"])
+
+        self.sendperm = 0
 
         self.meas = ["voltage", "current", "power_factor", "phase_angle", "power_active", "power_apparent", "power_reactive"]
         self.phases = {1:"p1", 2:"p2", 3:"p3"}
@@ -159,10 +103,28 @@ class readSdm72(threading.Thread):
                 ret = self.get_alive()
             elif(jcmd['command'] == "getPhaseValue"):
                 ret = self.get_phase_value_json(jcmd)
+            elif(jcmd['command'] == "setSendperm"):
+                ret = self.set_send_perm(jcmd)
         except Exception as e:
             logging.error(e)
             ret = json.dumps({"answer":"Error","Value":"Not a valid command"})
         return(ret)
+
+    def set_send_perm(self, jcmd) ->int:
+        """This function sets or unsets the variable self.sendperm.
+        If set to "On", the values of the counters specified in the broadcast function are send permanently.
+        If set to "Off", the values are only sent in the specified interval for saving.
+        Returns the value of self.sendperm
+        """
+        try:
+            if(jcmd["Value"] == "On"):
+                self.sendperm = 1
+            else:
+                self.sendperm = 0
+            return json.dumps({"Answer":"Success","Value":self.sendperm})
+        except:
+            return json.dumps({"Answer":"Error","Value":"Error during setting sendperm"})
+
 
     def get_alive(self):
         """ function to see, if we are alive
@@ -264,38 +226,27 @@ class readSdm72(threading.Thread):
             try:
                 now = time.strftime('%Y-%m-%d %H:%M:%S')
                 ts = datetime.datetime.now()
-                #self.sensor_values["EgStromLeistung"]["Value"] = round(self.meter_eg.read("total_system_power"), 3)
-                #self.sensor_values["EgStromLeistung"]["Timestamp"] = now
-                #self.sensor_values["EgStromEnergie"]["Value"] = round(self.meter_eg.read("total_import_kwh"), 3)
-                #self.sensor_values["EgStromEnergie"]["Timestamp"] = now
-                #self.sensor_values["AllgStromLeistung"]["Value"] = round(self.meter_allg.read("total_system_power"), 3)
-                #self.sensor_values["AllgStromLeistung"]["Timestamp"] = now
-                #self.sensor_values["AllgStromEnergie"]["Value"] = round(self.meter_allg.read("total_import_kwh"), 3)
-                #self.sensor_values["AllgStromEnergie"]["Timestamp"] = now
-                #self.sensor_values["OgStromLeistung"]["Value"] = round(self.meter_og.read("total_system_power"), 3)
-                #self.sensor_values["OgStromLeistung"]["Timestamp"] = now
-                #self.sensor_values["OgStromEnergie"]["Value"] = round(self.meter_og.read("total_import_kwh"), 3)
-                #self.sensor_values["OgStromEnergie"]["Timestamp"] = now
-
-                #print("{a:2.3f}W | {b:2.3f}kWh || {c:2.3f}W | {d:2.3f}kWh || {e:2.3f}W | {f:2.3f}kWh".format(a=p_eg, b=e_eg, c=p_allg, d=e_allg, e=p_og, f=e_og))
                 if((ts - ts_null).total_seconds() > 18):
                     store = 1
-                    #print(ts)
                     ts_null = datetime.datetime.now()
                 else:
                     store = 0
-                for sensor in self.sensor_values:
-                    message = {"measurement":{sensor:{"Value":0,"Floor":"","Type":"Power","Unit":"W","Timestamp":"","Store":store}}}
-                    message["measurement"][sensor]["Floor"] = self.sensor_values[sensor]["Floor"]
-                    message["measurement"][sensor]["Type"] = self.sensor_values[sensor]["Type"]
-                    message["measurement"][sensor]["Unit"] = self.sensor_values[sensor]["Unit"]
-                    message["measurement"][sensor]["Value"] = self.sensor_values[sensor]["Value"]
-                    message["measurement"][sensor]["Timestamp"] = self.sensor_values[sensor]["Timestamp"]
-                    self.udp.send(message)
+                if(self.sendperm or store):
+                    for fl in ["Eg", "Allg"]:
+                        for phase in [1,2,3]:
+                            res = self.get_phase_value(floor=fl, phase=phase, meas="power_active")
+                            print(fl, res)
+                            name = res["name"].replace(" ", "").replace("(", "").replace(")", "") + fl
+                            val = res["value"]
+                            unit = res["unit"]
+                            typ = name
+                            message = {}
+                            message = {"measurement":{name:{"Value":val,"Floor":fl,"Type":typ,"Unit":unit,"Timestamp":now,"Store":store}}}
+                            self.udp.send(message)
             except Exception as e:
                 pass
-                #logger.error("Error in broadcast_value")
-                #logger.error(str(e))
+                logger.error("Error in broadcast_value")
+                logger.error(str(e))
             self.bcastTstop.wait(1)
 
     def run(self):
