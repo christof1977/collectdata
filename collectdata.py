@@ -310,7 +310,7 @@ class kollektor():
             json_string = json.dumps({"command":"getFloors"})
             ret = udpRemote(json_string, addr="piesler", port=5009)
             for floor in ret["Floors"]:
-                json_string = json.dumps({"command":"getImportPower","device":"current","floor":floor})
+                json_string = json.dumps({"command":"getImportPower","Device":"SDM72","Floor":floor})
                 ret = udpRemote(json_string, addr="piesler", port=5009)
                 value = ret["Data"]["Energy"]["Value"]
                 unit = ret["Data"]["Energy"]["Unit"]

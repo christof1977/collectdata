@@ -106,6 +106,9 @@ class readSdm72(threading.Thread):
         self.meter["Allg"] = sdm_modbus.SDM72(parent=self.meter["Eg"], unit=self.floors["Allg"])
         self.meter["Og"] = sdm_modbus.SDM72(parent=self.meter["Eg"], unit=self.floors["Og"])
 
+        self.meas = ["voltage", "current", "power_factor", "phase_angle", "power_active", "power_apparent", "power_reactive"]
+        self.phases = {1:"p1", 2:"p2", 3:"p3"}
+
         self.hostname = socket.gethostname()
         self.basehost = self.hostname + ".home"
         self.t_stop = threading.Event()
@@ -154,6 +157,8 @@ class readSdm72(threading.Thread):
                 ret = self.get_floors()
             elif(jcmd['command'] == "getAlive"):
                 ret = self.get_alive()
+            elif(jcmd['command'] == "getPhaseValue"):
+                ret = self.get_phase_value_json(jcmd)
         except Exception as e:
             logging.error(e)
             ret = json.dumps({"answer":"Error","Value":"Not a valid command"})
@@ -165,22 +170,70 @@ class readSdm72(threading.Thread):
         return(json.dumps({"name":self.hostname,"answer":"Freilich"}))
 
     def get_floors(self):
-        logger.info(list(self.floors.keys()))
+        #logger.info(list(self.floors.keys()))
         return json.dumps({"Floors":list(self.floors.keys())})
         
+    def get_phase_value_json(self, jcmd):
+        '''
+        This function unpacks the json command received via the API and calls the function get_phase_value
+        with the appropriate parameters. Finally, it returns the well formatted json string expected by
+        the receiver.
+        '''
+        try:
+            floor = jcmd["Floor"]
+        except:
+            return json.dumps({"Answer":"Error","Value":"No floor given"})
+        if floor not in list(self.floors.keys()):
+            return json.dumps({"Answer":"Error","Value":"Floor not existing. Must be in {}".format(list(self.floors.keys()))})
+        try:
+            phase = jcmd["Phase"]
+        except:
+            return json.dumps({"Answer":"Error","Value":"No phase given"})
+        if phase not in [1, 2, 3]:
+            return json.dumps({"Answer":"Error","Value":"Phase not existing. Must be in [1, 2, 3]"})
+        try:
+            meas = jcmd["Meas"]
+        except:
+            return json.dumps({"Answer":"Error","Value":"No measurement given"})
+        if meas not in self.meas:
+            return json.dumps({"Answer":"Error","Value":"Measurement not existing. Must be in {}".format(self.meas)})
+        res = self.get_phase_value(floor=floor, phase=phase, meas=meas)
+
+        data = {}
+        data["Data"] = {}
+        data["Data"][res["name"]] = {"Value":res["value"], "Unit": res["unit"]}
+        data["Data"]["Floor"] = floor
+        data["Data"]["Device"] = "SDM72"
+        data["Data"]["Timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return json.dumps(data)
+
+    def get_phase_value(self, floor=None, meas=None, phase=None):
+        '''
+        This function reads the desired value from the desired counter, reformats the output
+        and returns the result as dict res = {"value":value, "unit":unit}.
+        '''
+        if phase not in self.phases.keys():
+            return json.dumps({"answer":"Error","Value":"Not a valid phase (must be in [1, 2, 3]"})
+        if meas not in self.meas:
+            return json.dumps({"answer":"Error","Value":"Not a valid measurement"})
+        cmd = self.phases[phase] + "_" + meas
+        value = round(self.meter[floor].read(cmd), 3)
+        unit = self.meter[floor].registers[cmd][6]
+        name = self.meter[floor].registers[cmd][5]
+        return {"name":name, "value":value, "unit":unit}
 
     def get_import_power(self, jcmd):
         '''
         This functions reads some values from the electrical power counter and retuns them as json string.
         '''
-        if(jcmd["device"] == "current"):
+        if(jcmd["Device"] == "SDM72"):
             data = {}
             data["Data"] = {}
-            if(jcmd["floor"] in ["Eg", "Og", "Allg"]):
+            if(jcmd["Floor"] in ["Eg", "Og", "Allg"]):
                 logger.info("Reading values from SDM72, floor {}".format(jcmd["floor"]))
                 value = round(self.meter[jcmd["floor"]].read("total_import_kwh"), 3)
-                data["Data"]["Energy"] = {"Value":value, "Unit": "kWh"}
-                data["Data"]["Floor"] = jcmd["floor"]
+                data["Data"]["Energy"] = {"Value":value*1000, "Unit": "W"}
+                data["Data"]["Floor"] = jcmd["Floor"]
                 data["Data"]["Device"] = "SDM72"
                 data["Data"]["Timestamp"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             else:
