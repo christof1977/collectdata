@@ -192,7 +192,7 @@ class readSdm72(threading.Thread):
             data = {}
             data["Data"] = {}
             if(jcmd["Floor"] in ["Eg", "Og", "Allg"]):
-                logger.info("Reading values from SDM72, floor {}".format(jcmd["floor"]))
+                logger.info("Reading values from SDM72, floor {}".format(jcmd["Floor"]))
                 value = round(self.meter[jcmd["floor"]].read("total_import_kwh"), 3)
                 data["Data"]["Energy"] = {"Value":value*1000, "Unit": "W"}
                 data["Data"]["Floor"] = jcmd["Floor"]
