@@ -12,6 +12,7 @@ import threading
 from threading import Thread
 from libby import udp_broadcast
 import socket
+import paho.mqtt.publish as publish
 
 
 server = "dose.home"
@@ -245,6 +246,7 @@ class readSdm72(threading.Thread):
                             typ = name
                             message = {}
                             message = {"measurement":{name:{"Value":val,"Floor":fl,"Type":typ,"Unit":unit,"Timestamp":now,"Store":store}}}
+                            publish.single("Power/"+fl+"/"+typ, val, hostname="dose.home")
                             self.udp.send(message)
             except Exception as e:
                 pass
