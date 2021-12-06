@@ -246,7 +246,7 @@ class readSdm72(threading.Thread):
                             typ = name
                             message = {}
                             message = {"measurement":{name:{"Value":val,"Floor":fl,"Type":typ,"Unit":unit,"Timestamp":now,"Store":store}}}
-                            publish.single("Power/"+fl+"/"+typ, val, hostname="dose.home")
+                            publish.single("Power/"+fl+"/"+typ, val, hostname="intern.plattentoni.de", client_id="Stromzaehler",auth = {"username":"raspi", "password":"parsi"})
                             self.udp.send(message)
             except Exception as e:
                 pass
