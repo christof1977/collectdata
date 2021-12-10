@@ -236,18 +236,18 @@ class readSdm72(threading.Thread):
                     ts_null = datetime.datetime.now()
                 else:
                     store = 0
-                for sensor in self.sensor_values:
-                    floor = self.sensor_values[sensor]["Floor"]
-                    typ = self.sensor_values[sensor]["Type"]
-                    value = self.sensor_values[sensor]["Value"]
-                    message = {"measurement":{sensor:{"Value":0,"Floor":"","Type":"Power","Unit":"W","Timestamp":"","Store":store}}}
-                    message["measurement"][sensor]["Floor"] = floor
-                    message["measurement"][sensor]["Type"] = typ
-                    message["measurement"][sensor]["Unit"] = self.sensor_values[sensor]["Unit"]
-                    message["measurement"][sensor]["Value"] = value
-                    message["measurement"][sensor]["Timestamp"] = self.sensor_values[sensor]["Timestamp"]
-                    publish.single("Power/"+floor+"/"+type_, value, hostname="dose.home")
-                    self.udp.send(message)
+                if(self.sendperm or store):
+                    for fl in ["Eg", "Allg"]:
+                        for phase in [1,2,3]:
+                            res = self.get_phase_value(floor=fl, phase=phase, meas="power_active")
+                            name = res["name"].replace(" ", "").replace("(", "").replace(")", "") + fl
+                            val = res["value"]
+                            unit = res["unit"]
+                            typ = name
+                            message = {}
+                            message = {"measurement":{name:{"Value":val,"Floor":fl,"Type":typ,"Unit":unit,"Timestamp":now,"Store":store}}}
+                            publish.single("Power/"+fl+"/"+typ, val, hostname="intern.plattentoni.de", client_id="Stromzaehler",auth = {"username":"raspi", "password":"parsi"})
+                            self.udp.send(message)
             except Exception as e:
                 pass
                 logger.error("Error in broadcast_value")
