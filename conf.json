@@ -1,6 +1,9 @@
 {
   "pelle":{
     "OekoAussenTemp":{
+      "Device":"Oekofen",
+      "Subdevice":"Allgemein",
+      "Identifier":"Aussentemperatur",
       "Name":"Aussentemperatur",
       "Type":"Temperature",
       "Unit":"°C",
@@ -11,6 +14,9 @@
       "Store":1
     },
     "OekoPumpeWestDrehzahl":{
+      "Device":"Oekofen",
+      "Subdevice":"Solar/West",
+      "Identifier":"Pumpendrehzahl",
       "Name":"Drehzahl Pumpe Solar Ost",
       "Type":"Speed",
       "Unit":"%",
@@ -21,6 +27,9 @@
       "Store":1
     },
     "OekoPumpeOstDrehzahl":{
+      "Device":"Oekofen",
+      "Subdevice":"Solar/Ost",
+      "Identifier":"Pumpendrehzahl",
       "Name":"Drehzahl Pumpe Solar Ost",
       "Type":"Speed",
       "Unit":"%",
@@ -31,6 +40,9 @@
       "Store":1
     },
     "OekoKollWestTemp":{
+      "Device":"Oekofen",
+      "Subdevice":"Solar/West",
+      "Identifier":"Kollektortemperatur",
       "Name":"Kollektortemperatur Solar West",
       "Type":"Temperature",
       "Unit":"°C",
@@ -41,6 +53,9 @@
       "Store":1
     },
     "OekoKollOstTemp":{
+      "Device":"Oekofen",
+      "Subdevice":"Solar/Ost",
+      "Identifier":"Kollektortemperatur",
       "Name":"Kollektortemperatur Solar Ost",
       "Type":"Temperature",
       "Unit":"°C",
@@ -51,6 +66,9 @@
       "Store":1
     },
     "OekoKollVorlaufTemp":{
+      "Device":"Oekofen",
+      "Subdevice":"Solar",
+      "Identifier":"Vorlauftemperatur",
       "Name":"Vorlauftemperatur Solar",
       "Type":"Temperature",
       "Unit":"°C",
@@ -61,6 +79,9 @@
       "Store":1
     },
     "OekoKollRuecklaufTemp":{
+      "Device":"Oekofen",
+      "Subdevice":"Solar",
+      "Identifier":"Ruecklauftemperatur",
       "Name":"Rücklauftemperatur Solar",
       "Type":"Temperature",
       "Unit":"°C",
@@ -71,6 +92,9 @@
       "Store":1
     },
     "OekoKollRuecklaufDurchfluss":{
+      "Device":"Oekofen",
+      "Subdevice":"Solar",
+      "Identifier":"Durchfluss",
       "Name":"Rücklauf Durchfluss Solar",
       "Type":"Flow",
       "Unit":"l/min",
@@ -81,6 +105,9 @@
       "Store":1
     },
     "OekoKollLeistung":{
+      "Device":"Oekofen",
+      "Subdevice":"Solar",
+      "Identifier":"Kollektorleistung",
       "Name":"Kollektorleistung Solar",
       "Type":"Power",
       "Unit":"W",
@@ -91,6 +118,9 @@
       "Store":1
     },
     "OekoSpUntenTemp":{
+      "Device":"Oekofen",
+      "Subdevice":"Solar",
+      "Identifier":"Puffertemperatur_unten",
       "Name":"Puffer Temperatur unten",
       "Type":"Temperature",
       "Unit":"°C",
@@ -101,6 +131,9 @@
       "Store":1
     },
     "OekoSpMitteTemp":{
+      "Device":"Oekofen",
+      "Subdevice":"Puffer",
+      "Identifier":"Temperatur_mitte",
       "Name":"Puffer Temperatur mitte",
       "Type":"Temperature",
       "Unit":"°C",
@@ -111,6 +144,9 @@
       "Store":1
     },
     "OekoSpObenTemp":{
+      "Device":"Oekofen",
+      "Subdevice":"Puffer",
+      "Identifier":"Temperatur_oben",
       "Name":"Puffer Temperatur oben",
       "Type":"Temperature",
       "Unit":"°C",
@@ -121,6 +157,9 @@
       "Store":1
     },
     "OekoFeuerraumTemp":{
+      "Device":"Oekofen",
+      "Subdevice":"Kessel",
+      "Identifier":"Feuerraumtemperatur",
       "Name":"Feuerraumtemperatur",
       "Type":"Temperature",
       "Unit":"°C",
@@ -131,6 +170,9 @@
       "Store":1
     },
     "OekoKesselTemp":{
+      "Device":"Oekofen",
+      "Subdevice":"Kessel",
+      "Identifier":"Kesseltemperatur",
       "Name":"Kesseltemperatur",
       "Type":"Temperature",
       "Unit":"°C",
@@ -141,6 +183,9 @@
       "Store":1
     },
     "OekoPeStatus":{
+      "Device":"Oekofen",
+      "Subdevice":"Kessel",
+      "Identifier":"Pelletronicstatus",
       "Name":"Pelletronic Status",
       "Type":"Status",
       "Unit":"",
@@ -151,6 +196,9 @@
       "Store":1
     },
     "OekoPuPumpeDrehzahl":{
+      "Device":"Oekofen",
+      "Subdevice":"Kessel",
+      "Identifier":"Ladepumpendrehzahl",
       "Name":"Drehzahl Pufferladepumpe",
       "Type":"Speed",
       "Unit":"%",
@@ -161,6 +209,9 @@
       "Store":1
     },
     "OekoCiRetTemp":{
+      "Device":"Oekofen",
+      "Subdevice":"Puffer",
+      "Identifier":"ZirkulationRuecklauftemperatur",
       "Name":"Rücklauftemperatur Zirkulation",
       "Type":"Temperature",
       "Unit":"°C",
@@ -171,6 +222,9 @@
       "Store":1
     },
     "OekoCiStatus":{
+      "Device":"Oekofen",
+      "Subdevice":"Puffer",
+      "Identifier":"ZirkulationStatus",
       "Name":"Status Zirkulationspumpe",
       "Type":"Status",
       "Unit":"",
@@ -181,6 +235,9 @@
       "Store":1
     },
     "OekoHkVlTempSet":{
+      "Device":"Oekofen",
+      "Subdevice":"Heizkreis_1",
+      "Identifier":"Sollvorlauftemperatur",
       "Name":"Vorlauf Soll Heizkreis 1",
       "Type":"Temperature",
       "Unit":"°C",
@@ -191,6 +248,9 @@
       "Store":1
     },
     "OekoHkVlTempAct":{
+      "Device":"Oekofen",
+      "Subdevice":"Heizkreis_1",
+      "Identifier":"Istvorlauftemperatur",
       "Name":"Vorlauf Ist Heizkreis 1",
       "Type":"Temperature",
       "Unit":"°C",
@@ -201,6 +261,9 @@
       "Store":1
     },
     "OekoStorageFill":{
+      "Device":"Oekofen",
+      "Subdevice":"Allgemein",
+      "Identifier":"Bunkerfuellstand",
       "Name":"Füllstand Bunker",
       "Type":"Mass",
       "Unit":"kg",
@@ -211,6 +274,9 @@
       "Store":1
     },
     "OekoStoragePopper":{
+      "Device":"Oekofen",
+      "Subdevice":"Allgemein",
+      "Identifier":"Popperfuellstand",
       "Name":"Füllstand Zwischenbehälter",
       "Type":"Mass",
       "Unit":"kg",
