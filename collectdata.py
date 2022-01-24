@@ -34,6 +34,7 @@ import urllib.request
 import logging
 import select
 import schedule
+import paho.mqtt.publish as publish
 
 
 logger = logging.getLogger('Kollektor')
@@ -120,6 +121,7 @@ class kollektor():
                         value = 0
                     unit = '{}'.format(c[key]["Unit"])
                     self.write_value(now, key, value, unit)
+                    publish.single("oekofen/"+key, value, hostname="mqtt.plattentoni.de", client_id="Oekofen")
             except Exception as e:
                 logger.error("JSON error! "+str(e))
             self.codTstop.wait(log_interval)
@@ -326,6 +328,7 @@ class kollektor():
                 key = "VerbrauchStrom"+ret["Data"]["Floor"]
                 now = time.strftime('%Y-%m-%d %H:%M:%S')
                 self.write_value(now, key, value, unit)
+                publish.single("Power/"+floor+"/"+key, value, hostname="dose")
         except Exception as e:
             logger.error("Error during reading import power")
             #logger.error(e)
