@@ -17,7 +17,7 @@ import math
 
 print(datetime.datetime.now()-ts_null)
 ts_null = datetime.datetime.now()
-server = "dose.home"
+server = "dose"
 udpBcPort =  6664
 logger = logging.getLogger('Stromzaehler')
 logger.setLevel(logging.DEBUG)

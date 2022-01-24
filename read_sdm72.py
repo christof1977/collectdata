@@ -15,7 +15,7 @@ import socket
 import paho.mqtt.publish as publish
 
 
-server = "dose.home"
+server = "dose"
 udpBcPort =  6664
 udp_port = 5009
 logging.debug("")
