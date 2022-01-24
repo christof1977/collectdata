@@ -54,7 +54,7 @@ class readSdm72(threading.Thread):
         self.phases = {1:"p1", 2:"p2", 3:"p3"}
 
         self.hostname = socket.gethostname()
-        self.basehost = self.hostname + ".home"
+        self.basehost = ""
         self.t_stop = threading.Event()
         self.udpServer()
         self.udp = udp_broadcast.udpBroadcast()
