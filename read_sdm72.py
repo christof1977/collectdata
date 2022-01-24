@@ -20,8 +20,8 @@ udpBcPort =  6664
 udp_port = 5009
 logging.debug("")
 logger = logging.getLogger(name='Stromzaehler')
-#logger.setLevel(logging.DEBUG)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
+#logger.setLevel(logging.INFO)
 
 
 class readSdm72(threading.Thread):
@@ -32,8 +32,7 @@ class readSdm72(threading.Thread):
         self.stopbits = 1
         self.parity = "N"
         self.baud = 1200
-        self.timeout = 2
-
+        self.timeout = .25
         self.floors = {"Eg":1, "Og":3, "Allg":2}
 
         self.meter = {}
@@ -252,7 +251,7 @@ class readSdm72(threading.Thread):
                 pass
                 logger.error("Error in broadcast_value")
                 logger.error(str(e))
-            self.bcastTstop.wait(1)
+            self.bcastTstop.wait(3)
 
     def run(self):
         while True:
