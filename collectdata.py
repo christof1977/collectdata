@@ -60,7 +60,7 @@ udpBcPort =  6664
 class kollektor():
     def __init__(self):
         self.hostname = socket.gethostname()
-        self.basehost = self.hostname + ".home"
+        self.basehost = self.hostname
         data = self.read_json(jsonfile)
         self.conf_pelle = data.pop("pelle")
         self.read_config()
