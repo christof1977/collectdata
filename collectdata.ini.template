@@ -1,0 +1,20 @@
+[GENERAL]
+Beattime = 5
+
+
+[BASE]
+Name = Kollektor
+Host = dose
+Port = 5012
+Mysqluser = user
+Mysqlpass = pass
+Mysqlserv = dose
+Mysqldb = heizung
+Parameter = xxxxTemp,yyyTemp,zzzzTemp
+Pelle = http://pelle:4321/xxxxxx/all
+Controller = heizungeg,fbhdg
+Mqttbroker = mqtt
+InfluxBucket = "messdaten"
+InfluxToken = ""
+InfluxHost = 
+InfluxOrg= ""
