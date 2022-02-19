@@ -31,7 +31,7 @@ class readSdm72(threading.Thread):
         self.device = "/dev/ttyAMA0"
         self.stopbits = 1
         self.parity = "N"
-        self.baud = 1200
+        self.baud = 19200
         self.timeout = .25
         self.floors = {"Eg":1, "Og":3, "Allg":2}
 
@@ -48,7 +48,7 @@ class readSdm72(threading.Thread):
         self.meter["Allg"] = sdm_modbus.SDM72(parent=self.meter["Eg"], unit=self.floors["Allg"])
         self.meter["Og"] = sdm_modbus.SDM72(parent=self.meter["Eg"], unit=self.floors["Og"])
 
-        self.sendperm = 0
+        self.sendperm = 1
 
         self.meas = ["voltage", "current", "power_factor", "phase_angle", "power_active", "power_apparent", "power_reactive"]
         self.phases = {1:"p1", 2:"p2", 3:"p3"}
