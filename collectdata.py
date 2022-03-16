@@ -304,17 +304,19 @@ class kollektor():
         exit()
 
     def get_counter_values(self):
-        for controller in self.controller:
-            logger.info("Getting counter values from " + controller)
-            now = time.strftime('%Y-%m-%d %H:%M:%S')
-            try:
-                ret = udpRemote(json.dumps({"command":"getCounterValues"}), addr=controller, port=5005)
-                value = ret["Data"]["Energy"]["Value"]
-                unit = ret["Data"]["Energy"]["Unit"]
-                key = "VerbrauchHeizung"+ret["Floor"]
-                self.write_value(now, key, value, unit)
-            except:
-                logger.error("No answer from " + controller)
+        try:
+            for controller in self.controller:
+                logger.info("Getting counter values from " + controller)
+                counters = udpRemote(json.dumps({"command":"getCounter"}), addr=controller, port=5005)
+                for counter in counters["Counter"]:
+                    now = time.strftime('%Y-%m-%d %H:%M:%S')
+                    ret = udpRemote(json.dumps({"command":"getCounterValues","Counter":counter}), addr=controller, port=5005)
+                    value = ret["Data"]["Energy"]["Value"]
+                    unit = ret["Data"]["Energy"]["Unit"]
+                    key = ret["Counter"]
+                    self.write_value(now, key, value, unit)
+        except:
+            logger.error("No answer from " + controller)
 
     def get_import_power(self):
         try:
