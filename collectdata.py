@@ -121,7 +121,7 @@ class kollektor():
                         value = 0
                     unit = '{}'.format(c[key]["Unit"])
                     self.write_value(now, key, value, unit)
-                    publish.single("oekofen/"+key, value, hostname="mqtt.plattentoni.de", client_id="Oekofen")
+                    publish.single("oekofen/{}/{}".format(level, name), value, hostname="mqtt.plattentoni.de", client_id="Oekofen")
             except Exception as e:
                 logger.error("JSON error! "+str(e))
             self.codTstop.wait(log_interval)
