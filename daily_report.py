@@ -5,7 +5,6 @@ import sys
 import getopt
 import syslog
 import configparser
-import pymysql
 import time
 import datetime
 import numpy as np
@@ -22,6 +21,9 @@ configfile = "collectdata.ini"
 realpath = os.path.realpath(__file__)
 basepath = os.path.split(realpath)[0]
 configfile = os.path.join(basepath, configfile)
+
+
+writeDB = True
 
 class DailyReport(object):
     '''
@@ -49,7 +51,7 @@ class DailyReport(object):
             logging.error("Configuration error")
             logging.error(e)
 
-    def influx_query(self, parameter, fil, day=None):
+    def influx_query(self, parameter, fil=None, day=None):
         start_date, end_date = datevalues.date_values_influx(day)
         query = 'from(bucket: "'+ self.influxbucket +'") \
                 |> range(start:'+start_date+', stop: '+ end_date+') \
@@ -68,6 +70,20 @@ class DailyReport(object):
                       |> aggregateWindow(fn: sum, every: 1mo) '
         return query
 
+    def influx_energy_query(self, parameter, fil=None, day=None):
+        start_date, end_date = datevalues.date_values_influx(day)
+        query = 'from(bucket: "'+ self.influxbucket +'") \
+                |> range(start:'+start_date+', stop: '+ end_date+') \
+                      |> filter(fn: (r) => r["topic"] == "'+parameter+'" and r["_field"] == "value")'
+        if(fil in ["pos", "neg"]):
+            if(fil=="pos"):
+                query = query + '|> filter(fn: (r) => r["_value"] > 0.0)'
+            else:
+                query = query + '|> filter(fn: (r) => r["_value"] <= 0.0)'
+        query = query + ' |> integral(unit: 1h) \
+                          |> map(fn: (r) => ({ r with _value: r._value / 1000.0}))'
+        return query
+
     def update_solar_gain(self, day=None):
         '''
         This function reads the solar gain of a given day out of the
@@ -84,7 +100,11 @@ class DailyReport(object):
             pwr = round(sum(pwr)/(3600/(86400/len(pwr))), 3)
         except ZeroDivisionError:
             pwr = 0
-        self.maria.write_day(start_date, "Solarertrag", pwr)
+        logging.info("Solarertrag: {}kWh".format(pwr))
+        if(writeDB):
+            self.maria.write_day(start_date, "Solarertrag", pwr)
+        else:
+            logging.warning("Not writing to DB")
 
     def update_pellet_consumption(self, day=None):
         '''
@@ -108,22 +128,31 @@ class DailyReport(object):
         noval = len(diffval)
         diffval = diffval[diffval != -1]
         verbrauch = noval - len(diffval)
-        self.maria.write_day(start_date, "VerbrauchPellets", verbrauch)
+        logging.info("Solarertrag: {}kg".format(verbrauch))
+        if(writeDB):
+            self.maria.write_day(start_date, "VerbrauchPellets", verbrauch)
+        else:
+            logging.warning("Not writing to DB")
 
-    def update_heating_energy(self, parameter, day=None):
+
+    def update_energy_consumption(self, parameter, day=None):
         '''
-        This function reads the value of the heating power consumption of a
+        This function reads the value of the power consumption of a
         given day or today and the value of the day before and calculates the
         power consuption of this day. The values is stored in the daily table.
         '''
-        logging.info("Getting consumed heating energy of day and  writing value to daily table")
+        logging.info("Getting consumed energy ({}) of day and  writing value to daily table".format(parameter))
         start_date, end_date = datevalues.date_values(day)
         try:
             con_today  = self.maria.read_day(start_date, parameter)[0][2]
             yesterday = start_date - datetime.timedelta(1)
             con_yesterday  = self.maria.read_day(yesterday, parameter)[0][2]
             con = (con_today - con_yesterday)/1000
-            self.maria.write_day(start_date, parameter, con)
+            logging.info("{}: {}kWh".format(parameter, con))
+            if(writeDB):
+                self.maria.write_day(start_date, parameter, con)
+            else:
+                logging.warning("Not writing to DB")
         except Exception as e:
             logging.error("Something went wrong: " + str(e))
 
@@ -159,35 +188,18 @@ class DailyReport(object):
                     value = round(record.get_value(), 2)
             start_date, end_date = datevalues.date_values(day)
             logging.info("Calculating {} of day and writing value to daily table".format(key))
-            self.maria.write_day(start_date, key, value)
-
-    def delete_redundancy(self, parameter, day=None):
-        logging.debug("Deleting redundant values of {}".format(parameter))
-        start_date, end_date = datevalues.date_values(day)
-        res = self.maria.read_day(start_date, parameter)
-        value = 0
-        idx_del = []
-        idx_nodel = []
-        for line in res:
-            if(line[2] == value):
-                idx_del.append(line[0])
+            logging.info("{}: {}kWh".format(key, value))
+            result = query_api.query(self.influx_energy_query(parameter[key]["par"], fil=parameter[key]["filter"] , day=day))
+            for table in result:
+                for record in table:
+                    value = round(record.get_value(), 2)
+            start_date, end_date = datevalues.date_values(day)
+            logging.info("NEW Calculating {} of day and writing value to daily table".format(key))
+            logging.info("{}: {}kWh".format(key, value))
+            if(writeDB):
+                self.maria.write_day(start_date, key, value)
             else:
-                idx_nodel.append(line[0])
-            value = line[2]
-        del_query = 'DELETE FROM messwert WHERE `index` = %s LIMIT 1;'
-        for id_del in idx_del:
-            con = pymysql.connect(user=self.mysqluser, passwd=self.mysqlpass,host=self.mysqlserv,db=self.mysqldb)
-            try:
-                logging.debug("Deleting %s" % id_del)
-                with con.cursor() as cur:
-                    cur.execute(del_query, id_del)
-                    con.commit()
-            except Exception as e:
-                logging.error("Error while deleting record: "+str(e))
-            finally:
-                logging.debug("Closing connection to DB")
-                con.close()
-        logging.info("Deleted {} redundant values of {}".format(len(idx_del), parameter))
+                logging.warning("Not writing to DB")
 
     def update_daily_average_temp(self, parameter, day=None):
         '''
@@ -198,11 +210,18 @@ class DailyReport(object):
         start_date, end_date = datevalues.date_values(day)
         try:
             mean_temp = self.get_mean(parameter, start_date)
-            self.maria.write_day(start_date, parameter, mean_temp)
+            logging.info("{}: {}°C".format(parameter, mean_temp))
+            if(writeDB):
+                self.maria.write_day(start_date, parameter, mean_temp)
+            else:
+                logging.warning("Not writing to DB")
         except Exception as e:
             logging.error("Something went wrong: " + str(e))
 
     def get_mean(self, parameter, day=None):
+        '''
+        Returns a day's mean value of a parameter 
+        '''
         logging.debug("Calculation average for {}".format(parameter))
         start_date, end_date = datevalues.date_values(day)
         res = self.maria.read_day(start_date, parameter)
@@ -211,24 +230,30 @@ class DailyReport(object):
 
     def daily_updates(self, day):
         '''
-        This method performs the daily updates. Day must be given in format
+        This function performs the daily updates. Day must be given in format
         "2020-10-10",
         '''
         logging.info("Performing daily database updates")
+        logging.info(" ")
         self.update_solar_gain(day=day)
+        logging.info(" ")
         self.update_pellet_consumption(day=day)
-        self.update_heating_energy("VerbrauchHeizungEG", day=day)
-        self.update_heating_energy("VerbrauchHeizungDG", day=day)
-        self.update_heating_energy("VerbrauchWW", day=day)
-        self.update_heating_energy("VerbrauchStromEg", day=day)
-        self.update_heating_energy("VerbrauchStromOg", day=day)
-        self.update_heating_energy("VerbrauchStromAllg", day=day)
-        self.delete_redundancy("OekoStorageFill", day=day)
-        self.delete_redundancy("OekoStoragePopper", day=day)
-        self.delete_redundancy("OekoCiStatus", day=day)
-        self.delete_redundancy("OekoPeStatus", day=day)
+        logging.info(" ")
         self.update_daily_average_temp("OekoAussenTemp", day=day)
+        logging.info(" ")
         self.update_electrical(day=day)
+        logging.info(" ")
+
+        energies = ["VerbrauchHeizungEG", "VerbrauchHeizungDG", "VerbrauchWW", "VerbrauchStromEg", "VerbrauchStromOg", "VerbrauchStromAllg"]
+        for parameter in energies:
+            self.update_energy_consumption(parameter, day=day)
+            logging.info(" ")
+
+        redundancy_deletion = ["OekoStorageFill", "OekoStoragePopper", "OekoCiStatus", "OekoPeStatus"]
+        for parameter in redundancy_deletion:
+            self.maria.delete_redundancy(parameter, day=day)
+            logging.info(" ")
+
 
 if __name__ == "__main__":
     '''
@@ -272,7 +297,7 @@ if __name__ == "__main__":
         dr.daily_updates(day)
 
 
-    dr.influx_calc_energy("2022-02-19")
+    #dr.influx_calc_energy("2022-02-19")
 
 
     #start_date = datetime.date(2018,8,11)
@@ -281,12 +306,8 @@ if __name__ == "__main__":
     #    print(single_date)
     #    dr.update_daily_average_temp("OekoAussenTemp", day=single_date)
 
-    #logging.info("Bye.")
-
 
     #dr.write('2017-11-12 1:2:3', 'Test', 44.0)
     #result = dr.read_one("OekoKollLeistung", "2018-09-12")
-    #dr.update_pellet_consumption(day="2020-10-23")
-    #dr.update_heating_energy("VerbrauchHeizungEG",day="2020-10-23")
     #print(dr.read_many("OekoAussenTemp", "2020-10-18 18:01%"))
     #print(dr.read_one("OekoAussenTemp"))
