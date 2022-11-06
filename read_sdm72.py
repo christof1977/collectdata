@@ -10,18 +10,20 @@ import datetime
 import logging
 import threading
 from threading import Thread
-from libby import udp_broadcast
 import socket
 import paho.mqtt.publish as publish
 
+mqttbhost = "mqtt.plattentoni.de"
+mqttbuser = "raspi"
+mqttbpass = "parsi"
 
 server = "dose"
 udpBcPort =  6664
 udp_port = 5009
 logging.debug("")
 logger = logging.getLogger(name='Stromzaehler')
-logger.setLevel(logging.DEBUG)
-#logger.setLevel(logging.INFO)
+#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 class readSdm72(threading.Thread):
@@ -57,7 +59,6 @@ class readSdm72(threading.Thread):
         self.basehost = ""
         self.t_stop = threading.Event()
         self.udpServer()
-        self.udp = udp_broadcast.udpBroadcast()
         self.broadcast_value()
         self.run()
 
@@ -236,17 +237,18 @@ class readSdm72(threading.Thread):
                 else:
                     store = 0
                 if(self.sendperm or store):
-                    for fl in ["Eg", "Allg"]:
+                    for fl in ["Eg", "Og", "Allg"]:
+                        pwr = []
                         for phase in [1,2,3]:
                             res = self.get_phase_value(floor=fl, phase=phase, meas="power_active")
-                            name = res["name"].replace(" ", "").replace("(", "").replace(")", "") + fl
+                            name = res["name"].replace(" ", "").replace("(", "").replace(")", "") # + fl
                             val = res["value"]
+                            pwr.append(val)
                             unit = res["unit"]
                             typ = name
-                            message = {}
-                            message = {"measurement":{name:{"Value":val,"Floor":fl,"Type":typ,"Unit":unit,"Timestamp":now,"Store":store}}}
-                            publish.single("Power/"+fl+"/"+typ, val, hostname="intern.plattentoni.de", client_id="Stromzaehler",auth = {"username":"raspi", "password":"parsi"})
-                            self.udp.send(message)
+                            publish.single("Power/"+fl+"/"+typ, val, hostname=mqttbhost, client_id="Stromzaehler",auth = {"username":mqttbuser, "password":mqttbpass})
+                        pwr_tot = round(sum(pwr),3)
+                        publish.single("Power/"+fl+"/SumPowerActive", pwr_tot, hostname=mqttbhost, client_id="Stromzaehler",auth = {"username":mqttbuser, "password":mqttbpass})
             except Exception as e:
                 pass
                 logger.error("Error in broadcast_value")
