@@ -4,3 +4,4 @@ schedule
 pymysql
 numpy
 paho-mqtt
+influxdb_client
