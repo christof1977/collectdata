@@ -189,6 +189,10 @@ class DailyReport(object):
             start_date, end_date = datevalues.date_values(day)
             logging.info("Calculating {} of day and writing value to daily table".format(key))
             logging.info("{}: {}kWh".format(key, value))
+            if(writeDB):
+                self.maria.write_day(start_date, key, value)
+            else:
+                logging.warning("Not writing to DB")
             result = query_api.query(self.influx_energy_query(parameter[key]["par"], fil=parameter[key]["filter"] , day=day))
             for table in result:
                 for record in table:
@@ -196,10 +200,6 @@ class DailyReport(object):
             start_date, end_date = datevalues.date_values(day)
             logging.info("NEW Calculating {} of day and writing value to daily table".format(key))
             logging.info("{}: {}kWh".format(key, value))
-            if(writeDB):
-                self.maria.write_day(start_date, key, value)
-            else:
-                logging.warning("Not writing to DB")
 
     def update_daily_average_temp(self, parameter, day=None):
         '''
@@ -300,10 +300,11 @@ if __name__ == "__main__":
     #dr.influx_calc_energy("2022-02-19")
 
 
-    #start_date = datetime.date(2018,8,11)
-    #day_count = 841
+    #start_date = datetime.date(2022,11,10)
+    #day_count = 16
     #for single_date in (start_date + datetime.timedelta(n) for n in range(day_count)):
     #    print(single_date)
+    #    dr.daily_updates(single_date)
     #    dr.update_daily_average_temp("OekoAussenTemp", day=single_date)
 
 
