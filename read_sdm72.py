@@ -241,14 +241,17 @@ class readSdm72(threading.Thread):
                         pwr = []
                         for phase in [1,2,3]:
                             res = self.get_phase_value(floor=fl, phase=phase, meas="power_active")
-                            name = res["name"].replace(" ", "").replace("(", "").replace(")", "") # + fl
+                            name = res["name"].replace("(","").replace(")","").split()
+                            name="Power/"+fl+"/"+name[0].replace("P","")+"/"+name[1]+name[2]
+                            #name = res["name"].replace(" ", "").replace("(", "").replace(")", "") # + fl
                             val = res["value"]
                             pwr.append(val)
                             unit = res["unit"]
                             typ = name
-                            publish.single("Power/"+fl+"/"+typ, val, hostname=mqttbhost, client_id="Stromzaehler",auth = {"username":mqttbuser, "password":mqttbpass})
+                            #publish.single("Power/"+fl+"/"+typ, val, hostname=mqttbhost, client_id="Stromzaehler",auth = {"username":mqttbuser, "password":mqttbpass})
+                            publish.single(name, val, hostname=mqttbhost, client_id="Stromzaehler",auth = {"username":mqttbuser, "password":mqttbpass})
                         pwr_tot = round(sum(pwr),3)
-                        publish.single("Power/"+fl+"/SumPowerActive", pwr_tot, hostname=mqttbhost, client_id="Stromzaehler",auth = {"username":mqttbuser, "password":mqttbpass})
+                        publish.single("Power/"+fl+"/Sum/PowerActive", pwr_tot, hostname=mqttbhost, client_id="Stromzaehler",auth = {"username":mqttbuser, "password":mqttbpass})
             except Exception as e:
                 pass
                 logger.error("Error in broadcast_value")
