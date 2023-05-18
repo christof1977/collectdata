@@ -311,9 +311,14 @@ class kollektor():
                 for counter in counters["Counter"]:
                     now = time.strftime('%Y-%m-%d %H:%M:%S')
                     ret = udpRemote(json.dumps({"command":"getCounterValues","Counter":counter}), addr=controller, port=5005)
-                    value = ret["Data"]["Energy"]["Value"]
-                    unit = ret["Data"]["Energy"]["Unit"]
-                    key = ret["Counter"]
+                    if ret["Data"]["Type"] == "Energy":
+                        value = ret["Data"]["Energy"]["Value"]
+                        unit = ret["Data"]["Energy"]["Unit"]
+                        key = ret["Counter"]
+                    elif ret["Data"]["Type"] == "Volume":
+                        value = ret["Data"]["Volume"]["Value"]
+                        unit = ret["Data"]["Volume"]["Unit"]
+                        key = ret["Counter"]
                     self.write_value(now, key, value, unit)
         except:
             logger.error("No answer from " + controller)
@@ -338,6 +343,7 @@ class kollektor():
 
 
     def run(self):
+        self.get_counter_values()
         while True:
             schedule.run_pending()
             time.sleep(1)
