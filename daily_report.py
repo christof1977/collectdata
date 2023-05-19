@@ -100,11 +100,18 @@ class DailyReport(object):
             pwr = round(sum(pwr)/(3600/(86400/len(pwr))), 3)
         except ZeroDivisionError:
             pwr = 0
+        client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
+        query_api = client.query_api()
+        result = query_api.query(self.influx_energy_query("oekofen/se2/L_pwr", day=day))
+        #for table in result:
+        #    for record in table:
+        #        print(record)
         logging.info("Solarertrag: {}kWh".format(pwr))
         if(writeDB):
             self.maria.write_day(start_date, "Solarertrag", pwr)
         else:
             logging.warning("Not writing to DB")
+        return result
 
     def update_pellet_consumption(self, day=None):
         '''
@@ -145,8 +152,10 @@ class DailyReport(object):
         start_date, end_date = datevalues.date_values(day)
         try:
             con_today  = self.maria.read_day(start_date, parameter)[0][2]
+            logging.info("Consumed today: {}".format(con_today))
             yesterday = start_date - datetime.timedelta(1)
             con_yesterday  = self.maria.read_day(yesterday, parameter)[0][2]
+            logging.info("Consumed yesterday: {}".format(con_yesterday))
             con = (con_today - con_yesterday)/1000
             logging.info("{}: {}kWh".format(parameter, con))
             if(writeDB):
@@ -156,6 +165,28 @@ class DailyReport(object):
         except Exception as e:
             logging.error("Something went wrong: " + str(e))
 
+    def update_water_consumption(self, parameter, day=None):
+        '''
+        This function reads the value of the water consumption of a
+        given day or today and the value of the day before and calculates the
+        water consuption of this day. The values is stored in the daily table.
+        '''
+        logging.info("Getting consumed energy ({}) of day and  writing value to daily table".format(parameter))
+        start_date, end_date = datevalues.date_values(day)
+        try:
+            con_today  = self.maria.read_day(start_date, parameter)[0][2]
+            logging.info("Consumed today: {}".format(con_today))
+            yesterday = start_date - datetime.timedelta(1)
+            con_yesterday  = self.maria.read_day(yesterday, parameter)[0][2]
+            logging.info("Consumed yesterday: {}".format(con_yesterday))
+            con = (con_today - con_yesterday)
+            logging.info("{}: {}m^3".format(parameter, con))
+            if(writeDB):
+                self.maria.write_day(start_date, parameter, con)
+            else:
+                logging.warning("Not writing to DB")
+        except Exception as e:
+            logging.error("Something went wrong: " + str(e))
     def influx_calc_energy(self, day=None):
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
@@ -244,9 +275,14 @@ class DailyReport(object):
         self.update_electrical(day=day)
         logging.info(" ")
 
-        energies = ["VerbrauchHeizungEG", "VerbrauchHeizungDG", "VerbrauchWW", "VerbrauchStromEg", "VerbrauchStromOg", "VerbrauchStromAllg"]
+        energies = ["VerbrauchHeizungEG", "VerbrauchHeizungDG", "VerbrauchWW" "VerbrauchStromEg", "VerbrauchStromOg", "VerbrauchStromAllg"]
         for parameter in energies:
             self.update_energy_consumption(parameter, day=day)
+            logging.info(" ")
+
+        water = ["VerbrauchGartenwasser"]
+        for parameter in water:
+            self.update_water_consumption(parameter, day=day)
             logging.info(" ")
 
         redundancy_deletion = ["OekoStorageFill", "OekoStoragePopper", "OekoCiStatus", "OekoPeStatus"]
