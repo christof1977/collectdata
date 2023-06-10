@@ -64,13 +64,7 @@ class DailyReport(object):
                 query = query + '|> filter(fn: (r) => r["_value"] > 0.0)'
             else:
                 query = query + '|> filter(fn: (r) => r["_value"] <= 0.0)'
-        #query = query + ' |> aggregateWindow( \
-        #                   every: 1h, \
-        #                    fn: (tables=<-, column) => \
-        #                        tables \
-        #                            |> integral(unit: 1h) \
-        #                            |> map(fn: (r) => ({ r with _value: r._value / 1000.0}))) \
-        #              |> aggregateWindow(fn: sum, every: 1mo) '
+        query = query + ' |> keep(columns: ["_time", "_value"])'
         return query
 
     def influx_query(self, parameter, fil=None, day=None):
@@ -149,6 +143,7 @@ class DailyReport(object):
                 unit = ret["Data"]["Energy"]["Unit"]
                 key = "Strom"+ret["Data"]["Floor"]
                 now = time.strftime('%Y-%m-%d %H:%M:%S')
+                logging.info("{} {} k{}".format(key, value/1000, unit))
                 #self.write_value(now, key, value, unit)
                 #publish.single("Power/"+floor+"/"+key, value, hostname="dose")
                 if(self.write_maria):
@@ -195,6 +190,7 @@ class DailyReport(object):
         for record in result:
             for line in record:
                 try:
+                    # Take only values with differ from the previous one
                     if(line["_value"] != val[-1]):
                         val.append(line["_value"])
                 except:
@@ -332,7 +328,7 @@ class DailyReport(object):
 
     def get_mean(self, parameter, day=None):
         '''
-        Returns a day's mean value of a parameter 
+        Returns a day's mean value of a parameter
         
         TODO: change to influx (?)
 
@@ -342,6 +338,29 @@ class DailyReport(object):
         res = self.maria.read_day(start_date, parameter)
         res = np.array(res)
         return(round(np.mean(res[:,2]),2))
+
+    def calculate_daily_values(self, day):
+        start_date, end_date = datevalues.date_values(day)
+        day_before = start_date -  datetime.timedelta(days=1)
+        res_day = self.maria.read_daily_row(start_date)
+        res_day_before = self.maria.read_daily_row(day_before)
+        parameter = ["HeizungEG", "HeizungDG", "Warmwasser", "Gartenwasser",  "StromEg", "StromOg", "StromAllg"]
+        for par in parameter:
+            try:
+                para = "Zaehler" + par
+                if(par == "Gartenwasser"):
+                    con = round(res_day[para] - res_day_before[para],3)
+                else:
+                    con = round(res_day[para] - res_day_before[para],3)/1000
+                logging.info("{} Alt: {} Neu: {} Verbrauch: {}".format(par, res_day_before[para], res_day[para], con))
+                if(self.write_maria):
+                    self.maria.write_day(start_date, "Verbrauch"+par, con)
+                else:
+                    logging.warning("Not writing to DB")
+            except:
+                logging.warning("Something went wrong. Maybe no values for given day?")
+
+
 
     def daily_updates(self, day):
         '''
@@ -361,6 +380,8 @@ class DailyReport(object):
         self.get_counter_values(day=day)
         logging.info(" ")
         self.get_electrical_power(day=day)
+        logging.info(" ")
+        self.calculate_daily_values(day=day)
 
         #energies = ["VerbrauchHeizungEG", "VerbrauchHeizungDG", "VerbrauchWarmwasser", "VerbrauchStromEg", "VerbrauchStromOg", "VerbrauchStromAllg"]
         #for parameter in energies:
@@ -398,10 +419,11 @@ if __name__ == "__main__":
     electrical_power = False
     solar_gain = False
     pellet_consumption = False
+    daily_values = True
     #Check if arguments are valid
     argv = sys.argv[1:]
     try:
-        opts, args = getopt.getopt(argv, 'd:uwcesp')
+        opts, args = getopt.getopt(argv, 'd:uwcespv')
     except getopt.GetoptError as err:
         logging.error("Arguments error!")
         exit()
@@ -431,6 +453,8 @@ if __name__ == "__main__":
             solar_gain = True
         if(o == "-p"):
             pellet_consumption = True
+        if(o == "-v"):
+            daily_values = True
 
     if(solar_gain):
         dr.update_solar_gain(day=day)
@@ -446,6 +470,9 @@ if __name__ == "__main__":
 
     if(pellet_consumption):
         dr.update_pellet_consumption(day=day)
+
+    if(daily_values):
+        dr.calculate_daily_values(day=day)
 
     #dr.influx_calc_energy("2022-02-19")
 
