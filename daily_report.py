@@ -419,7 +419,7 @@ if __name__ == "__main__":
     electrical_power = False
     solar_gain = False
     pellet_consumption = False
-    daily_values = True
+    daily_values = False
     #Check if arguments are valid
     argv = sys.argv[1:]
     try:
