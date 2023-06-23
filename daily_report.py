@@ -318,21 +318,6 @@ class DailyReport(object):
         logging.info(" ")
         self.calculate_daily_values(day=day)
 
-        #energies = ["VerbrauchHeizungEG", "VerbrauchHeizungDG", "VerbrauchWarmwasser", "VerbrauchStromEg", "VerbrauchStromOg", "VerbrauchStromAllg"]
-        #for parameter in energies:
-        #    self.update_energy_consumption(parameter, day=day)
-        #    logging.info(" ")
-
-        #water = ["VerbrauchGartenwasser"]
-        #for parameter in water:
-        #    self.update_water_consumption(parameter, day=day)
-        #    logging.info(" ")
-
-        redundancy_deletion = ["OekoStorageFill", "OekoStoragePopper", "OekoCiStatus", "OekoPeStatus"]
-        for parameter in redundancy_deletion:
-            self.maria.delete_redundancy(parameter, day=day)
-            logging.info(" ")
-
 if __name__ == "__main__":
     '''
     If this file is called as a main program, it is a helper for daily jobs.
