@@ -254,9 +254,20 @@ class DailyReport(object):
         calculates the mean value and stores it in the daily database.
         '''
         logging.info("Calculation mean temperature and writing value to daily table")
-        start_date, end_date = datevalues.date_values(day)
+        #start_date, end_date = datevalues.date_values(day)
+        start_date, end_date = datevalues.date_values_influx(day)
+        client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
+        query_api = client.query_api()
+        query = 'from(bucket: "oekofen") \
+                |> range(start: ' + start_date + ', stop: ' + end_date + ') \
+                |> filter(fn: (r) => r["tag"] == "' + parameter + '") \
+                |> aggregateWindow(every: 24h, fn: mean) \
+                |> yield(name: "mean")'
+        result = query_api.query(query)
         try:
-            mean_temp = self.get_mean(parameter, start_date)
+            for table in result:
+                for record in table:
+                    mean_temp = round(record["_value"],2)
             logging.info("{}: {}°C".format(parameter, mean_temp))
             if(self.write_maria):
                 self.maria.write_day(start_date, parameter, mean_temp)
@@ -264,19 +275,6 @@ class DailyReport(object):
                 logging.warning("Not writing to DB")
         except Exception as e:
             logging.error("Something went wrong: " + str(e))
-
-    def get_mean(self, parameter, day=None):
-        '''
-        Returns a day's mean value of a parameter
-
-        TODO: change to influx (?)
-
-        '''
-        logging.debug("Calculation average for {}".format(parameter))
-        start_date, end_date = datevalues.date_values(day)
-        res = self.maria.read_day(start_date, parameter)
-        res = np.array(res)
-        return(round(np.mean(res[:,2]),2))
 
     def calculate_daily_values(self, day):
         start_date, end_date = datevalues.date_values(day)
@@ -310,7 +308,7 @@ class DailyReport(object):
         logging.info(" ")
         self.update_pellet_consumption(day=day)
         logging.info(" ")
-        self.update_daily_average_temp("OekoAussenTemp", day=day)
+        self.update_daily_average_temp("L_ambient", day=day)
         logging.info(" ")
         self.update_electrical(day=day)
         logging.info(" ")
@@ -356,10 +354,11 @@ if __name__ == "__main__":
     solar_gain = False
     pellet_consumption = False
     daily_values = False
+    average_temp = False
     #Check if arguments are valid
     argv = sys.argv[1:]
     try:
-        opts, args = getopt.getopt(argv, 'd:uwcespv')
+        opts, args = getopt.getopt(argv, 'd:uwcespvt')
     except getopt.GetoptError as err:
         logging.error("Arguments error!")
         exit()
@@ -391,6 +390,8 @@ if __name__ == "__main__":
             pellet_consumption = True
         if(o == "-v"):
             daily_values = True
+        if(o == "-t"):
+            average_temp = True
 
     if(solar_gain):
         dr.update_solar_gain(day=day)
@@ -409,6 +410,9 @@ if __name__ == "__main__":
 
     if(daily_values):
         dr.calculate_daily_values(day=day)
+
+    if(average_temp):
+        dr.update_daily_average_temp("L_ambient", day=day)
 
     #dr.influx_calc_energy("2022-02-19")
 
