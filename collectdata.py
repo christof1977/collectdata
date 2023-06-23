@@ -118,7 +118,6 @@ class kollektor():
                     elif(value == "false" or value == "False"):
                         value = 0
                     unit = '{}'.format(c[key]["Unit"])
-                    self.write_value(now, key, value, unit)
                     publish.single("oekofen/{}/{}".format(level, name), value, hostname="mqtt.plattentoni.de", client_id="Oekofen")
             except Exception as e:
                 logger.error("JSON error! "+str(e))
