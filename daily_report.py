@@ -24,12 +24,7 @@ realpath = os.path.realpath(__file__)
 basepath = os.path.split(realpath)[0]
 configfile = os.path.join(basepath, configfile)
 
-
-
 class DailyReport(object):
-    '''
-    TODO
-    '''
     def __init__(self):
         self.read_config()
         self.maria = mysqldose.Mysqldose(self.mysqluser, self.mysqlpass, self.mysqlserv, self.mysqldb)
@@ -208,62 +203,6 @@ class DailyReport(object):
         else:
             logging.warning("Not writing to DB")
 
-
-    def update_energy_consumption(self, parameter, day=None):
-        '''
-        This function reads the value of the power consumption of a
-        given day or today and the value of the day before and calculates the
-        power consuption of this day. The values is stored in the daily table.
-
-
-        TODO: change to Influx
-
-
-        '''
-        logging.info("Getting consumed energy ({}) of day and  writing value to daily table".format(parameter))
-        start_date, end_date = datevalues.date_values(day)
-        try:
-            con_today  = self.maria.read_day(start_date, parameter)[0][2]
-            logging.info("Consumed today: {}".format(con_today))
-            yesterday = start_date - datetime.timedelta(1)
-            con_yesterday  = self.maria.read_day(yesterday, parameter)[0][2]
-            logging.info("Consumed yesterday: {}".format(con_yesterday))
-            con = (con_today - con_yesterday)/1000
-            logging.info("{}: {}kWh".format(parameter, con))
-            if(self.write_maria):
-                self.maria.write_day(start_date, parameter, con)
-            else:
-                logging.warning("Not writing to DB")
-        except Exception as e:
-            logging.error("Something went wrong: " + str(e))
-
-    def update_water_consumption(self, parameter, day=None):
-        '''
-        This function reads the value of the water consumption of a
-        given day or today and the value of the day before and calculates the
-        water consuption of this day. The values is stored in the daily table.
-
-        TODO: change to Influx
-
-        '''
-        logging.info("Getting consumed energy ({}) of day and  writing value to daily table".format(parameter))
-        start_date, end_date = datevalues.date_values(day)
-        try:
-            con_today  = self.maria.read_day(start_date, parameter)[0][2]
-            logging.info("Consumed today: {}".format(con_today))
-            yesterday = start_date - datetime.timedelta(1)
-            con_yesterday  = self.maria.read_day(yesterday, parameter)[0][2]
-            logging.info("Consumed yesterday: {}".format(con_yesterday))
-            con = (con_today - con_yesterday)
-            logging.info("{}: {}m^3".format(parameter, con))
-            if(self.write_maria):
-                self.maria.write_day(start_date, parameter, con)
-            else:
-                logging.warning("Not writing to DB")
-        except Exception as e:
-            logging.error("Something went wrong: " + str(e))
-
-
     def influx_calc_energy(self, day=None):
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
@@ -329,7 +268,7 @@ class DailyReport(object):
     def get_mean(self, parameter, day=None):
         '''
         Returns a day's mean value of a parameter
-        
+
         TODO: change to influx (?)
 
         '''
@@ -359,8 +298,6 @@ class DailyReport(object):
                     logging.warning("Not writing to DB")
             except:
                 logging.warning("Something went wrong. Maybe no values for given day?")
-
-
 
     def daily_updates(self, day):
         '''
@@ -397,7 +334,6 @@ class DailyReport(object):
         for parameter in redundancy_deletion:
             self.maria.delete_redundancy(parameter, day=day)
             logging.info(" ")
-
 
 if __name__ == "__main__":
     '''
