@@ -69,7 +69,7 @@ class DailyReport(object):
                       |> filter(fn: (r) => r["topic"] == "'+parameter+'" and r["_field"] == "value")'
         if(fil in ["pos", "neg"]):
             if(fil=="pos"):
-                query = query + '|> filter(fn: (r) => r["_value"] > 0.0)'
+                query = query + '|> filter(fn: (r) => r["_value"] >= 0.0)'
             else:
                 query = query + '|> filter(fn: (r) => r["_value"] <= 0.0)'
         query = query + ' |> aggregateWindow( \
@@ -88,10 +88,13 @@ class DailyReport(object):
                       |> filter(fn: (r) => r["topic"] == "'+parameter+'" and r["_field"] == "value")'
         if(fil in ["pos", "neg"]):
             if(fil=="pos"):
-                query = query + '|> filter(fn: (r) => r["_value"] > 0.0)'
+                query = query + '|> filter(fn: (r) => r["_value"] >= 0.0)'
             else:
                 query = query + '|> filter(fn: (r) => r["_value"] <= 0.0)'
-        query = query + ' |> integral(unit: 1h) \
+        query = query + ' |> window(every: 1h) \
+                          |> integral(unit: 1h) \
+                          |> group() \
+                          |> sum() \
                           |> map(fn: (r) => ({ r with _value: r._value / 1000.0}))'
         return query
 
@@ -234,19 +237,20 @@ class DailyReport(object):
                 for record in table:
                     value = round(record.get_value(), 2)
             start_date, end_date = datevalues.date_values(day)
-            logging.info("Calculating {} of day and writing value to daily table".format(key))
+            #logging.info("Calculating {} of day and writing value to daily table".format(key))
             logging.info("{}: {}kWh".format(key, value))
             if(self.write_maria):
                 self.maria.write_day(start_date, key, value)
             else:
-                logging.warning("Not writing to DB")
+                #logging.warning("Not writing to DB")
+                pass
             result = query_api.query(self.influx_energy_query(parameter[key]["par"], fil=parameter[key]["filter"] , day=day))
             for table in result:
                 for record in table:
                     value = round(record.get_value(), 2)
             start_date, end_date = datevalues.date_values(day)
-            logging.info("NEW Calculating {} of day and writing value to daily table".format(key))
-            logging.info("{}: {}kWh".format(key, value))
+            #logging.info("NEW Calculating {} of day and writing value to daily table".format(key))
+            logging.info("{}: {}kWh (neu)".format(key, value))
 
     def update_daily_average_temp(self, parameter, day=None):
         '''
@@ -340,10 +344,11 @@ if __name__ == "__main__":
     pellet_consumption = False
     daily_values = False
     average_temp = False
+    energy = False
     #Check if arguments are valid
     argv = sys.argv[1:]
     try:
-        opts, args = getopt.getopt(argv, 'd:uwcespvt')
+        opts, args = getopt.getopt(argv, 'd:uwcespvtn')
     except getopt.GetoptError as err:
         logging.error("Arguments error!")
         exit()
@@ -377,6 +382,8 @@ if __name__ == "__main__":
             daily_values = True
         if(o == "-t"):
             average_temp = True
+        if(o == "-n"):
+            energy = True
 
     if(solar_gain):
         dr.update_solar_gain(day=day)
@@ -398,6 +405,9 @@ if __name__ == "__main__":
 
     if(average_temp):
         dr.update_daily_average_temp("L_ambient", day=day)
+
+    if(energy):
+        dr.update_electrical(day=day)
 
     #dr.influx_calc_energy("2022-02-19")
 
