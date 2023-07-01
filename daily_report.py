@@ -62,11 +62,15 @@ class DailyReport(object):
         query = query + ' |> keep(columns: ["_time", "_value"])'
         return query
 
-    def influx_query(self, parameter, fil=None, day=None):
+    def influx_query(self, parameter, number=None, fil=None, day=None, bucket=None):
+        if bucket is None:
+            bucket = self.influxbucket
         start_date, end_date = datevalues.date_values_influx(day)
-        query = 'from(bucket: "'+ self.influxbucket +'") \
+        query = 'from(bucket: "'+ bucket +'") \
                 |> range(start:'+start_date+', stop: '+ end_date+') \
-                      |> filter(fn: (r) => r["topic"] == "'+parameter+'" and r["_field"] == "value")'
+                      |> filter(fn: (r) => r["tag"] == "'+parameter+'" and r["_field"] == "value")'
+        if number is not None:
+            query = query + '|> filter(fn: (r) => r["id"] == "' + str(number) + '")'
         if(fil in ["pos", "neg"]):
             if(fil=="pos"):
                 query = query + '|> filter(fn: (r) => r["_value"] >= 0.0)'
@@ -81,21 +85,29 @@ class DailyReport(object):
                       |> aggregateWindow(fn: sum, every: 1mo) '
         return query
 
-    def influx_energy_query(self, parameter, fil=None, day=None):
+    def influx_energy_query(self, parameter, number=None, fil=None, day=None, bucket=None):
+        if bucket is None:
+            bucket = self.influxbucket
         start_date, end_date = datevalues.date_values_influx(day)
-        query = 'from(bucket: "'+ self.influxbucket +'") \
-                |> range(start:'+start_date+', stop: '+ end_date+') \
-                      |> filter(fn: (r) => r["topic"] == "'+parameter+'" and r["_field"] == "value")'
+        query = 'from(bucket: "{}") \
+                 |> range(start:{}, stop: {}) \
+                 |> filter(fn: (r) => r["tag"] == "{}" and r["_field"] == "value")'.format(bucket, start_date, end_date, parameter)
+        if number is not None:
+            query = '{} |> filter(fn: (r) => r["id"] == "{}")'.format(query, number)
         if(fil in ["pos", "neg"]):
             if(fil=="pos"):
-                query = query + '|> filter(fn: (r) => r["_value"] >= 0.0)'
+                fil = '|> filter(fn: (r) => r["_value"] >= 0.0)'
             else:
-                query = query + '|> filter(fn: (r) => r["_value"] <= 0.0)'
-        query = query + ' |> window(every: 1h) \
-                          |> integral(unit: 1h) \
-                          |> group() \
-                          |> sum() \
-                          |> map(fn: (r) => ({ r with _value: r._value / 1000.0}))'
+                fil = '|> filter(fn: (r) => r["_value"] <= 0.0)'
+        else:
+            fil = ""
+        query = '{} \
+                 {} \
+                 |> window(every: 1h) \
+                 |> integral(unit: 1h) \
+                 |> group() \
+                 |> sum() \
+                 |> map(fn: (r) => ({{ r with _value: r._value / 1000.0}}))'.format(query, fil)
         return query
 
     def get_counter_values(self, day=None):
@@ -105,7 +117,6 @@ class DailyReport(object):
         start_date, end_date = datevalues.date_values(day)
         try:
             for controller in self.controller:
-                logging.info("Getting counter values from " + controller)
                 counters = udpRemote(json.dumps({"command":"getCounter"}), addr=controller, port=5005)
                 for counter in counters["Counter"]:
                     now = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -121,8 +132,6 @@ class DailyReport(object):
                     logging.info("{} {} {} {}".format(now, key, value, unit))
                     if(self.write_maria):
                         self.maria.write_day(start_date, "Zaehler"+key, value)
-                    else:
-                        logging.warning("Not writing to DB")
         except Exception as e:
             logging.error("No answer from " + controller)
             logging.error(e)
@@ -146,8 +155,6 @@ class DailyReport(object):
                 #publish.single("Power/"+floor+"/"+key, value, hostname="dose")
                 if(self.write_maria):
                     self.maria.write_day(start_date, "Zaehler"+key, value)
-                else:
-                    logging.warning("Not writing to DB")
         except Exception as e:
             logging.error("Error during reading import power")
             #logging.error(e)
@@ -158,19 +165,16 @@ class DailyReport(object):
         messwert database table and stores the sum in the daily database
         If no day is given, today is chosen.
         '''
-        logging.info("Calculating solar gain and writing value to daily table")
         start_date, end_date = datevalues.date_values(day)
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
-        result = query_api.query(self.influx_energy_query("oekofen/se2/L_pwr", day=day))
+        result = query_api.query(self.influx_energy_query("L_pwr", bucket="oekofen", day=day))
         for table in result:
             for record in table:
                 pwr = "{:.2f}".format(record["_value"]*1000)
         logging.info("Solarertrag: {}kWh".format(pwr))
         if(self.write_maria):
             self.maria.write_day(start_date, "Solarertrag", pwr)
-        else:
-            logging.warning("Not writing to DB")
         return result
 
     def update_pellet_consumption(self, day=None):
@@ -179,7 +183,6 @@ class DailyReport(object):
         messwert database table and stores the sum in the daily database
         If no day is given, today is chosen.
         '''
-        logging.info("Calculating pellet consumption and writing value to daily table")
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
         query = self.influx_raw_query("oekofen/pe1/L_storage_popper", day=day)
@@ -203,14 +206,11 @@ class DailyReport(object):
         start_date, end_date = datevalues.date_values(day)
         if(self.write_maria):
             self.maria.write_day(start_date, "VerbrauchPellets", verbrauch)
-        else:
-            logging.warning("Not writing to DB")
 
     def influx_calc_energy(self, day=None):
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
         start_date, end_date = datevalues.date_values_influx(day)
-        print(start_date)
         return
         query = 'from(bucket: "'+ self.influxbucket +'") \
                 |> range(start:'+start_date+', stop: '+ end_date+') \
@@ -223,50 +223,56 @@ class DailyReport(object):
     def update_electrical(self, day=None):
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
-        parameter = {"VerbrauchStromHaus":{"par":"E3DC/EMS_DATA/EMS_POWER_HOME","filter":None},
-                "PVErtragAc":{"par":"E3DC/EMS_DATA/EMS_POWER_PV","filter":None},
-                "PVErtragDcOst":{"par":"E3DC/PVI_DATA/0/PVI_DC_POWER/0/PVI_VALUE","filter":None},
-                "PVErtragDcWest":{"par":"E3DC/PVI_DATA/0/PVI_DC_POWER/1/PVI_VALUE","filter":None},
-                "Netzbezug":{"par":"E3DC/EMS_DATA/EMS_POWER_GRID","filter":"pos"},
-                "Netzeinspeisung":{"par":"E3DC/EMS_DATA/EMS_POWER_GRID","filter":"neg"},
-                "Batterieladung":{"par":"E3DC/EMS_DATA/EMS_POWER_BAT","filter":"pos"},
-                "Batterieentladung":{"par":"E3DC/EMS_DATA/EMS_POWER_BAT","filter":"neg"}}
+        parameter = {"VerbrauchStromHaus":{"bucket":"e3dc","par":"EMS_POWER_HOME","filter":None},
+                "PVErtragAc":{"bucket":"e3dc","par":"EMS_POWER_PV","filter":None},
+                "PVErtragDcOst":{"bucket":"e3dc","par":"PVI_DC_POWER","id":0,"filter":None},
+                "PVErtragDcWest":{"bucket":"e3dc","par":"PVI_DC_POWER","id":1,"filter":None},
+                "Netzbezug":{"bucket":"e3dc","par":"EMS_POWER_GRID","filter":"pos"},
+                "Netzeinspeisung":{"bucket":"e3dc","par":"EMS_POWER_GRID","filter":"neg"},
+                "Batterieladung":{"bucket":"e3dc","par":"EMS_POWER_BAT","filter":"pos"},
+                "Batterieentladung":{"bucket":"e3dc","par":"EMS_POWER_BAT","filter":"neg"}}
         for key in parameter:
-            result = query_api.query(self.influx_query(parameter[key]["par"], fil=parameter[key]["filter"] , day=day))
-            for table in result:
-                for record in table:
-                    value = round(record.get_value(), 2)
-            start_date, end_date = datevalues.date_values(day)
+            try:
+                bucket = parameter[key]["bucket"]
+            except:
+                bucket = self.influxbucket
+            try:
+                number = parameter[key]["id"]
+            except:
+                number = None
+            #result = query_api.query(self.influx_query(parameter[key]["par"], fil=parameter[key]["filter"], number=number, day=day, bucket=bucket))
+            #for table in result:
+            #    for record in table:
+            #        value = round(record.get_value(), 2)
+            #start_date, end_date = datevalues.date_values(day)
             #logging.info("Calculating {} of day and writing value to daily table".format(key))
-            logging.info("{}: {}kWh".format(key, value))
-            if(self.write_maria):
-                self.maria.write_day(start_date, key, value)
-            else:
-                #logging.warning("Not writing to DB")
-                pass
-            result = query_api.query(self.influx_energy_query(parameter[key]["par"], fil=parameter[key]["filter"] , day=day))
+            #logging.info("{}: {}kWh".format(key, value))
+            result = query_api.query(self.influx_energy_query(parameter[key]["par"], fil=parameter[key]["filter"], number=number, day=day, bucket=bucket))
             for table in result:
                 for record in table:
                     value = round(record.get_value(), 2)
             start_date, end_date = datevalues.date_values(day)
             #logging.info("NEW Calculating {} of day and writing value to daily table".format(key))
             logging.info("{}: {}kWh (neu)".format(key, value))
+            if(self.write_maria):
+                self.maria.write_day(start_date, key, value)
 
-    def update_daily_average_temp(self, parameter, day=None):
+    def update_daily_average_temp(self, parameter, bucket=None, day=None):
         '''
         This function reads the recorded temperature values of a day,
         calculates the mean value and stores it in the daily database.
         '''
-        logging.info("Calculation mean temperature and writing value to daily table")
+        if bucket is None:
+            bucket = self.influxbucket
         #start_date, end_date = datevalues.date_values(day)
         start_date, end_date = datevalues.date_values_influx(day)
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
-        query = 'from(bucket: "oekofen") \
-                |> range(start: ' + start_date + ', stop: ' + end_date + ') \
-                |> filter(fn: (r) => r["tag"] == "' + parameter + '") \
+        query = 'from(bucket: "{}") \
+                |> range(start: {}, stop: {}) \
+                |> filter(fn: (r) => r["tag"] == "{}") \
                 |> aggregateWindow(every: 24h, fn: mean) \
-                |> yield(name: "mean")'
+                |> yield(name: "mean")'.format(bucket, start_date, end_date, parameter)
         result = query_api.query(query)
         try:
             for table in result:
@@ -275,8 +281,6 @@ class DailyReport(object):
             logging.info("{}: {}°C".format(parameter, mean_temp))
             if(self.write_maria):
                 self.maria.write_day(start_date, parameter, mean_temp)
-            else:
-                logging.warning("Not writing to DB")
         except Exception as e:
             logging.error("Something went wrong: " + str(e))
 
@@ -296,8 +300,6 @@ class DailyReport(object):
                 logging.info("{} Alt: {} Neu: {} Verbrauch: {}".format(par, res_day_before[para], res_day[para], con))
                 if(self.write_maria):
                     self.maria.write_day(start_date, "Verbrauch"+par, con)
-                else:
-                    logging.warning("Not writing to DB")
             except:
                 logging.warning("Something went wrong. Maybe no values for given day?")
 
@@ -312,7 +314,7 @@ class DailyReport(object):
         logging.info(" ")
         self.update_pellet_consumption(day=day)
         logging.info(" ")
-        self.update_daily_average_temp("L_ambient", day=day)
+        self.update_daily_average_temp("L_ambient", bucket="oekofen", day=day)
         logging.info(" ")
         self.update_electrical(day=day)
         logging.info(" ")
@@ -353,6 +355,7 @@ if __name__ == "__main__":
         logging.error("Arguments error!")
         exit()
     #Parsing arguments
+    logging.info("Arguments passed:")
     for o,a in opts:
         logging.info(o)
         if(o == "-d"):
@@ -385,6 +388,9 @@ if __name__ == "__main__":
         if(o == "-n"):
             energy = True
 
+    if not dr.write_maria:
+        logging.warning("Not writing values to database")
+
     if(solar_gain):
         dr.update_solar_gain(day=day)
 
@@ -404,7 +410,7 @@ if __name__ == "__main__":
         dr.calculate_daily_values(day=day)
 
     if(average_temp):
-        dr.update_daily_average_temp("L_ambient", day=day)
+        dr.update_daily_average_temp("L_ambient", bucket="oekofen", day=day)
 
     if(energy):
         dr.update_electrical(day=day)
