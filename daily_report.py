@@ -264,7 +264,7 @@ class DailyReport(object):
         '''
         if bucket is None:
             bucket = self.influxbucket
-        #start_date, end_date = datevalues.date_values(day)
+        start_date_maria, end_date_maria = datevalues.date_values(day)
         start_date, end_date = datevalues.date_values_influx(day)
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
@@ -280,7 +280,9 @@ class DailyReport(object):
                     mean_temp = round(record["_value"],2)
             logging.info("{}: {}°C".format(parameter, mean_temp))
             if(self.write_maria):
-                self.maria.write_day(start_date, parameter, mean_temp)
+                if parameter == "L_ambient":
+                    parameter = "OekoAussenTemp"
+                self.maria.write_day(start_date_maria, parameter, mean_temp)
         except Exception as e:
             logging.error("Something went wrong: " + str(e))
 
