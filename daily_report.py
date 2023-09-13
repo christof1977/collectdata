@@ -115,8 +115,8 @@ class DailyReport(object):
         Die Namen der Zähler werden von den Controllern geliefert und müssen mit den Spaltennamen (Mit Prefix "Zaehler" ) übereinstimmen.
         '''
         start_date, end_date = datevalues.date_values(day)
-        try:
-            for controller in self.controller:
+        for controller in self.controller:
+            try:
                 counters = udpRemote(json.dumps({"command":"getCounter"}), addr=controller, port=5005)
                 for counter in counters["Counter"]:
                     now = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -132,9 +132,9 @@ class DailyReport(object):
                     logging.info("{} {} {} {}".format(now, key, value, unit))
                     if(self.write_maria):
                         self.maria.write_day(start_date, "Zaehler"+key, value)
-        except Exception as e:
-            logging.error("No answer from " + controller)
-            logging.error(e)
+            except Exception as e:
+                logging.error("No answer from " + controller)
+                logging.error(e)
 
     def get_electrical_power(self, day=None):
         ''' Reads the current import power from the electrial power meters and stores them to daily value database.
