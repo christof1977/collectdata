@@ -234,6 +234,19 @@
       "Comment":"",
       "Store":1
     },
+    "OekoHkPump":{
+      "Device":"Oekofen",
+      "Subdevice":"Heizkreis_1",
+      "Identifier":"Umwaelzumpe",
+      "Name":"Status Umwälzpumpe HK1",
+      "Type":"Status",
+      "Unit":"",
+      "Factor":0,
+      "oe_level":"hk1",
+      "oe_name":"L_pump",
+      "Comment":"",
+      "Store":1
+    },
     "OekoHkVlTempSet":{
       "Device":"Oekofen",
       "Subdevice":"Heizkreis_1",

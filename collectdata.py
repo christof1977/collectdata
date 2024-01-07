@@ -70,8 +70,6 @@ class kollektor():
         self.broadcast_value()
         self.udpRx()
         self.udpServer()
-        schedule.every().day.at("23:59").do(self.get_counter_values)
-        schedule.every().day.at("23:59").do(self.get_import_power)
         self.run()
 
     def read_json(self, jsonfile):
@@ -120,7 +118,6 @@ class kollektor():
                     elif(value == "false" or value == "False"):
                         value = 0
                     unit = '{}'.format(c[key]["Unit"])
-                    self.write_value(now, key, value, unit)
                     publish.single("oekofen/{}/{}".format(level, name), value, hostname="mqtt.plattentoni.de", client_id="Oekofen")
             except Exception as e:
                 logger.error("JSON error! "+str(e))
@@ -291,7 +288,6 @@ class kollektor():
             self.mysqlserv = self.config['BASE']['Mysqlserv']
             self.mysqldb = self.config['BASE']['Mysqldb']
             self.parameter = self.config['BASE']['Parameter'].split(',')
-            self.controller = self.config['BASE']['Controller'].split(',')
             self.pelle = self.config['BASE']['Pelle']
             print(self.parameter)
         except:
@@ -302,40 +298,6 @@ class kollektor():
         self.db.close()
         logger.info("Kollektor: So long sucker!")
         exit()
-
-    def get_counter_values(self):
-        try:
-            for controller in self.controller:
-                logger.info("Getting counter values from " + controller)
-                counters = udpRemote(json.dumps({"command":"getCounter"}), addr=controller, port=5005)
-                for counter in counters["Counter"]:
-                    now = time.strftime('%Y-%m-%d %H:%M:%S')
-                    ret = udpRemote(json.dumps({"command":"getCounterValues","Counter":counter}), addr=controller, port=5005)
-                    value = ret["Data"]["Energy"]["Value"]
-                    unit = ret["Data"]["Energy"]["Unit"]
-                    key = ret["Counter"]
-                    self.write_value(now, key, value, unit)
-        except:
-            logger.error("No answer from " + controller)
-
-    def get_import_power(self):
-        try:
-            json_string = json.dumps({"command":"getFloors"})
-            ret = udpRemote(json_string, addr="piesler", port=5009)
-            for floor in ret["Floors"]:
-                json_string = json.dumps({"command":"getImportPower","Device":"SDM72","Floor":floor})
-                ret = udpRemote(json_string, addr="piesler", port=5009)
-                value = ret["Data"]["Energy"]["Value"]
-                unit = ret["Data"]["Energy"]["Unit"]
-                key = "VerbrauchStrom"+ret["Data"]["Floor"]
-                now = time.strftime('%Y-%m-%d %H:%M:%S')
-                self.write_value(now, key, value, unit)
-                publish.single("Power/"+floor+"/"+key, value, hostname="dose")
-        except Exception as e:
-            logger.error("Error during reading import power")
-            #logger.error(e)
-
-
 
     def run(self):
         while True:
