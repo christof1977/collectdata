@@ -53,7 +53,7 @@ class readSdm72(threading.Thread):
         self.sendperm = 1
 
         self.meas = ["voltage", "current", "power_factor", "phase_angle", "power_active", "power_apparent", "power_reactive"]
-        self.phases = {1:"p1", 2:"p2", 3:"p3"}
+        self.phases = {1:"l1", 2:"l2", 3:"l3"}
 
         self.hostname = socket.gethostname()
         self.basehost = ""
@@ -194,7 +194,7 @@ class readSdm72(threading.Thread):
             data["Data"] = {}
             if(jcmd["Floor"] in ["Eg", "Og", "Allg"]):
                 floor = jcmd["Floor"]
-                cmd = "total_import_kwh"
+                cmd = "import_energy_active"
                 logger.info("Reading values from SDM72, floor {}".format(jcmd["Floor"]))
                 value = round(self.meter[jcmd["Floor"]].read(cmd), 3)
                 unit = self.meter[floor].registers[cmd][6]
@@ -253,7 +253,6 @@ class readSdm72(threading.Thread):
                         pwr_tot = round(sum(pwr),3)
                         publish.single("Power/"+fl+"/Sum/PowerActive", pwr_tot, hostname=mqttbhost, client_id="Stromzaehler",auth = {"username":mqttbuser, "password":mqttbpass})
             except Exception as e:
-                pass
                 logger.error("Error in broadcast_value")
                 logger.error(str(e))
             self.bcastTstop.wait(3)
