@@ -5,3 +5,4 @@ pymysql
 numpy
 paho-mqtt
 influxdb_client
+requests

@@ -9,6 +9,7 @@ import time
 import datetime
 import json
 import numpy as np
+import requests
 from libby import mysqldose
 from libby import datevalues
 from libby.remote import udpRemote
@@ -114,24 +115,35 @@ class DailyReport(object):
         ''' Holt die Werte von Wassser und Wärmemengenzähler und speichert sie in die Daily-Datenbank
         Die Namen der Zähler werden von den Controllern geliefert und müssen mit den Spaltennamen (Mit Prefix "Zaehler" ) übereinstimmen.
         '''
+
+        def _get_values(ret):
+            now = time.strftime('%Y-%m-%d %H:%M:%S')
+            if ret["Data"]["Type"] == "Energy":
+                value = ret["Data"]["Energy"]["Value"]
+                unit = ret["Data"]["Energy"]["Unit"]
+                key = ret["Counter"]
+            elif ret["Data"]["Type"] == "Volume":
+                value = ret["Data"]["Volume"]["Value"]
+                unit = ret["Data"]["Volume"]["Unit"]
+                key = ret["Counter"]
+            logging.info("{} {} {} {}".format(now, key, value, unit))
+            if(self.write_maria):
+                self.maria.write_day(start_date, "Zaehler"+key, value)
+
         start_date, end_date = datevalues.date_values(day)
         for controller in self.controller:
             try:
+                # Probieren, ob es noch den UDP-Server im Controller gibt
                 counters = udpRemote(json.dumps({"command":"getCounter"}), addr=controller, port=5005)
                 for counter in counters["Counter"]:
-                    now = time.strftime('%Y-%m-%d %H:%M:%S')
-                    ret = udpRemote(json.dumps({"command":"getCounterValues","Counter":counter}), addr=controller, port=5005)
-                    if ret["Data"]["Type"] == "Energy":
-                        value = ret["Data"]["Energy"]["Value"]
-                        unit = ret["Data"]["Energy"]["Unit"]
-                        key = ret["Counter"]
-                    elif ret["Data"]["Type"] == "Volume":
-                        value = ret["Data"]["Volume"]["Value"]
-                        unit = ret["Data"]["Volume"]["Unit"]
-                        key = ret["Counter"]
-                    logging.info("{} {} {} {}".format(now, key, value, unit))
-                    if(self.write_maria):
-                        self.maria.write_day(start_date, "Zaehler"+key, value)
+                    _get_values(udpRemote(json.dumps({"command":"getCounterValues","Counter":counter}), addr=controller, port=5005))
+            except TypeError:
+                # Wenn es keine UDP-Server mehr gibt, gibt es hoffentlich die neue REST-API
+                api_url = "http://" + controller + ":5000/counter"
+                counters = requests.get(api_url).json()
+                for counter in counters["Counter"]:
+                    api_url = "http://" + controller + ":5000/counter/" + counter
+                    _get_values(requests.get(api_url).json())
             except Exception as e:
                 logging.error("No answer from " + controller)
                 logging.error(e)
