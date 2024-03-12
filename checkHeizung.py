@@ -5,6 +5,7 @@ import sys
 import json
 import select
 import logging
+from urllib.request import urlopen
 
 
 logging.basicConfig(level=logging.ERROR)
@@ -57,18 +58,23 @@ def main():
         logging.error("Wrong number of arguments, exit.")
         exit()
 
-    json_string = '{"command" : "getAlive"}\n'
     try:
-        ret = json.loads(udpRemote(json_string, addr=addr, port=port))
+        # Try, if the controller answers via the really cool and modern REST interface
+        with urlopen("http://" + addr + ":" + str(port)) as url:
+            ret = json.load(url)
     except:
-        ret = {}
-        ret["answer"] = "Nix"
+        try:
+            # Try, if the controller is old-fashined reachable via udp-server
+            json_string = '{"command" : "getAlive"}\n'
+            ret = json.loads(udpRemote(json_string, addr=addr, port=port))
+        except:
+            ret = {}
+            ret["answer"] = "Nix"
     if(ret["answer"] == "Freilich"):
         print(json.dumps(ret))
         sys.exit(0)
     else:
         print(json.dumps(ret))
-        print("nok")
         sys.exit(100)
 
 
