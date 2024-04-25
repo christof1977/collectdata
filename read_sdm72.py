@@ -67,8 +67,8 @@ class readSdm72(threading.Thread):
         self.udpSock = socket.socket( socket.AF_INET,  socket.SOCK_DGRAM )
         self.udpSock.bind( (self.basehost,udp_port) )
 
-        udpT = threading.Thread(target=self._udpServer)
-        udpT.setDaemon(True)
+        udpT = threading.Thread(target = self._udpServer, daemon = True)
+        #udpT.setDaemon(True)
         udpT.start()
 
     def _udpServer(self):
@@ -214,8 +214,8 @@ class readSdm72(threading.Thread):
         Starts the UDP sensor broadcasting daemon thread
         '''
         self.bcastTstop = threading.Event()
-        bcastT = threading.Thread(target=self._broadcast_value)
-        bcastT.setDaemon(True)
+        bcastT = threading.Thread(target = self._broadcast_value, daemon = True)
+        #bcastT.setDaemon(True)
         bcastT.start()
 
     def _broadcast_value(self):
@@ -225,7 +225,7 @@ class readSdm72(threading.Thread):
         This datagram could be fetched by multiple clients for purposes
         of display or storage.
         '''
-        logger.info("Starting UDP Sensor Broadcasting Thread" + threading.currentThread().getName())
+        logger.info("Starting UDP Sensor Broadcasting Thread" + threading.current_thread().name)
         ts_null = datetime.datetime.now()
         while(not self.bcastTstop.is_set()):
             try:
