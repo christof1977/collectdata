@@ -89,15 +89,14 @@ class kollektor():
 
     def collect_oekofendata(self):
         self.codTstop = threading.Event()
-        codT = threading.Thread(target=self._collect_oekofendata)
-        codT.setDaemon(True)
+        codT = threading.Thread(target = self._collect_oekofendata, daemon = True)
         codT.start()
 
     def _collect_oekofendata(self):
         '''
         Collecting data from Oekofen Oven and store the into database
         '''
-        logger.info("Starting collection of Oekofen data thread as " + threading.currentThread().getName())
+        logger.info("Starting collection of Oekofen data thread as " + threading.current_thread().name)
         while(not self.codTstop.is_set()):
             try:
                 now = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -127,8 +126,7 @@ class kollektor():
 
     def fetch_oekofendata(self):
         self.fodTstop = threading.Event()
-        fodT = threading.Thread(target=self._fetch_oekofendata)
-        fodT.setDaemon(True)
+        fodT = threading.Thread(target = self._fetch_oekofendata, daemon = True)
         fodT.start()
 
     def _fetch_oekofendata(self):
@@ -174,8 +172,7 @@ class kollektor():
 
     def broadcast_value(self):
         self.bcastTstop = threading.Event()
-        bcastT = threading.Thread(target=self._broadcast_value)
-        bcastT.setDaemon(True)
+        bcastT = threading.Thread(target = self._broadcast_value, daemon = True)
         bcastT.start()
 
     def _broadcast_value(self):
@@ -197,8 +194,7 @@ class kollektor():
 
     def udpServer(self):
         self.udpSeTstop = threading.Event()
-        udpSeT = threading.Thread(target=self._udpServer)
-        udpSeT.setDaemon(True)
+        udpSeT = threading.Thread(target = self._udpServer, daemon = True)
         udpSeT.start()
 
     def _udpServer(self):
@@ -238,8 +234,7 @@ class kollektor():
     def udpRx(self):
         logger.debug("fuck")
         self.udpRxTstop = threading.Event()
-        udpRxT = threading.Thread(target=self._udpRx)
-        udpRxT.setDaemon(True)
+        udpRxT = threading.Thread(target = self._udpRx, daemon = True)
         udpRxT.start()
 
     def _udpRx(self):
