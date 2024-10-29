@@ -14,7 +14,7 @@ if(__name__ == "__main__"):
     #logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger()
     handler = logging.handlers.SysLogHandler(address = '/dev/log')
-    formatter = logging.Formatter('Ampi: %(module)s: %(levelname)s: %(message)s')
+    formatter = logging.Formatter('ReadE3DC: %(module)s: %(levelname)s: %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
