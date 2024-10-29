@@ -1,0 +1,22 @@
+{
+    "e3dc" : {
+        "host"    : "ip or hostname of e3dc",
+        "user"    : "e3dc username",
+        "pass"    : "e3dc web password",
+        "key"     : "rscp key",
+        "mapfile" : "e3dc_mapping.json",
+        "config"  : {}
+    },
+    "mqtt" : {
+        "host"    : "MQTT broker IP or hostname",
+        "user"    : "MQTT broker username",
+        "pass"    : "MQTT broker password",
+        "client"  : "e3dcsammler",
+        "port"    : 1883,
+        "timeout" : 60
+    },
+    "interval" : {
+        "general" : 2,
+        "bat"  : 20
+    }
+}

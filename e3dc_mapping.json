@@ -1,0 +1,133 @@
+{"E2DC" : {
+    "BAT_DATA": {
+        "0" : {
+            "BAT_ASOC" : "asoc",
+            "BAT_RSOC_REAL" : "rsocReal",
+            "BAT_CHARGE_CYCLES" : "chargeCycles",
+            "BAT_INFO" : {
+                "BAT_RSOC" : "rsoc" },
+            "BAT_DCB_INFO" : {
+                "0" : {
+                    "BAT_DCB_SOC" : "dcbs/0/soc",
+                    "BAT_DCB_SOH" : "dcbs/0/soh",
+                    "BAT_DCB_CYCLE_COUNT" : "dcbs/0/cycleCount" },
+                "1" : {
+                    "BAT_DCB_SOC" : "dcbs/1/soc",
+                    "BAT_DCB_SOH" : "dcbs/1/soh",
+                    "BAT_DCB_CYCLE_COUNT" : "dcbs/1/cycleCount" },
+                "2" : {
+                    "BAT_DCB_SOC" : "dcbs/2/soc",
+                    "BAT_DCB_SOH" : "dcbs/2/soh",
+                    "BAT_DCB_CYCLE_COUNT" : "dbcs/2/cycleCount" },
+                "3" : {
+                    "BAT_DCB_SOC" : "dcbs/3/soc",
+                    "BAT_DCB_SOH" : "dcbs/3/soh",
+                    "BAT_DCB_CYCLE_COUNT" : "dcbs/3/cycleCount" }
+            }
+        }
+    },
+    "DCDC_DATA" : {
+        "0" : {
+            "DCDC_P_BAT" : "",
+            "DCDC_P_DCL" : "",
+            "DCDC_U_BAT" : "",
+            "DCDC_U_DCL" : "",
+            "DCDC_I_BAT" : "",
+            "DCDC_I_DCL" : "",
+            "DCDC_STATUS_AS_STRING" : {
+                "DCDC_STATE_AS_STRING" : "",
+                "DCDC_SUBSTATE_AS_STRING" : ""}
+        }
+    },
+    "EMS_DATA" : {
+        "EMS_POWER_GRID" : "production/grid",
+        "EMS_POWER_ADD" : "production/add",
+        "EMS_BAT_SOC" : "stateOfCharge",
+        "EMS_AUTARKY" : "autarky",
+        "EMS_SELF_CONSUMPTION" : "selfConsumption",
+        "EMS_REMAINING_BAT_DISCHARGE_POWER" : "",
+        "EMS_ALIVE" : "",
+        "EMS_POWER_PV" : "production/solar",
+        "EMS_POWER_BAT" : "consumption/battery",
+        "EMS_POWER_HOME" : "consumption/house"
+    },
+    "PVI_DATA" : {
+        "0" : {
+            "PVI_DEVICE_STATE" : {
+                "PVI_DEVICE_CONNECTED" : "deviceState/connected",
+                "PVI_DEVICE_WORKING" : "deviceState/working",
+                "PVI_DEVICE_IN_SERVICE" : "deviceState/inService" },
+            "PVI_AC_POWER": {
+                "0" : { "PVI_VALUE" : "phases/0/power" },
+                "1" : { "PVI_VALUE" : "phases/1/power" },
+                "2" : { "PVI_VALUE" : "phases/2/power" } },
+            "PVI_AC_VOLTAGE": {
+                 "0" : { "PVI_VALUE" : "phases/0/voltage" },
+                 "1" : { "PVI_VALUE" : "phases/1/voltage" },
+                 "2" : { "PVI_VALUE" : "phases/2/voltage" } },
+            "PVI_AC_CURRENT": {
+                "0" : { "PVI_VALUE" : "phases/0/current" },
+                "1" : { "PVI_VALUE" : "phases/1/current" },
+                "2" : { "PVI_VALUE" : "phases/2/current" } },
+            "PVI_AC_APPARENTPOWER" : {
+                "0" : { "PVI_VALUE" : "phases/0/apparentPower" },
+                "1" : { "PVI_VALUE" : "phases/1/apparentPower" },
+                "2" : { "PVI_VALUE" : "phases/2/apparentPower" } },
+            "PVI_AC_REACTIVEPOWER" : {
+                "0" : { "PVI_VALUE" : "phases/0/reacitvePower" },
+                "1" : { "PVI_VALUE" : "phases/1/reacitvePower" },
+                "2" : { "PVI_VALUE" : "phases/2/reacitvePower" } },
+            "PVI_AC_ENERGY_ALL" : {
+                "0" : { "PVI_VALUE" : "phases/0/energyAll" },
+                "1" : { "PVI_VALUE" : "phases/1/energyAll" },
+                "2" : { "PVI_VALUE" : "phases/2/energyAll" } },
+            "PVI_AC_ENERGY_GRID_CONSUMPTION" : {
+                "0" : { "PVI_VALUE" : "phases/0/energyGridConsumption" },
+                "1" : { "PVI_VALUE" : "phases/1/energyGridConsumption" },
+                "2" : { "PVI_VALUE" : "phases/2/energyGridConsumption" } },
+            "PVI_DC_POWER" : {
+                "0" : { "PVI_VALUE" : "strings/0/power" },
+                "1" : { "PVI_VALUE" : "strings/1/power" } },
+            "PVI_DC_VOLTAGE" : {
+                "0" : { "PVI_VALUE" : "strings/0/voltage" },
+                "1" : { "PVI_VALUE" : "strings/1/voltage" } },
+            "PVI_DC_CURRENT" : {
+                "0" : { "PVI_VALUE" : "strings/0/current" },
+                "1" : { "PVI_VALUE" : "strings/1/current" } },
+            "PVI_DC_STRING_ENERGY_ALL" : {
+                "0" : { "PVI_VALUE" : "strings/0/energyAll" },
+                "1" : { "PVI_VALUE" : "strings/1/energyAll" } },
+            "PVI_TEMPERATURE" : {
+                "0" : { "PVI_VALUE" : "" },
+                "1" : { "PVI_VALUE" : "" },
+                "2" : { "PVI_VALUE" : "" },
+                "3" : { "PVI_VALUE" : "" } },
+            "PVI_POWER_MODE" : "powerMode",
+            "PVI_SYSTEM_MODE" : "",
+            "PVI_REQ_FREQUENCY_UNDER_OVER" : "",
+            "PVI_ON_GRID" : "onGrid",
+            "PVI_STATE" : "state",
+            "PVI_LAST_ERROR" : "lastError"
+        }
+    },
+    "PM_DATA" : {
+        "6" : {
+            "PM_INDEX" : "",
+            "PM_POWER_L1" : "power/L1",
+            "PM_POWER_L2" : "power/L2",
+            "PM_POWER_L3" : "power/L3",
+            "PM_VOLTAGE_L1" : "voltage/L1",
+            "PM_VOLTAGE_L2" : "voltage/L2",
+            "PM_VOLTAGE_L3" : "voltage/L3",
+            "PM_ENERGY_L1" : "energy/L1",
+            "PM_ENERGY_L2" : "energy/L2",
+            "PM_ENERGY_L3" : "energy/L3",
+            "PM_DEVICE_STATE" : {
+                "PM_DEVICE_CONNECTED" : "",
+                "PM_DEVICE_WORKING" : "",
+                "PM_DEVICE_IN_SERVICE" : ""
+            }
+        }
+    }
+    }
+}
