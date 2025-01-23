@@ -56,18 +56,21 @@ if( __name__ == "__main__"):
         mapping = json.load(mapfile)
         flat_map = get_item(mapping)
 
-    try:
-        mqttclient = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, config["mqtt"]["client"])
-        mqttclient.username_pw_set(config["mqtt"]["user"], config["mqtt"]["pass"])
-        mqttclient.connect(config["mqtt"]["host"],
-                           config["mqtt"]["port"],
-                           config["mqtt"]["timeout"],
-                )
-        mqttclient.loop_start()
-        logger.info("Connection to MQTT broker successful")
-    except:
-        logger.error("No connection to MQTT broker! Exiting.")
-        exit()
+    mqtt_successful = False 
+    while mqtt_successful is not True:
+        try:
+            mqttclient = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, config["mqtt"]["client"])
+            mqttclient.username_pw_set(config["mqtt"]["user"], config["mqtt"]["pass"])
+            mqttclient.connect(config["mqtt"]["host"],
+                               config["mqtt"]["port"],
+                               config["mqtt"]["timeout"],
+                    )
+            mqttclient.loop_start()
+            logger.info("Connection to MQTT broker successful")
+            mqtt_successful = True
+        except:
+            logger.error("No connection to MQTT broker! Retrying in a second.")
+            sleep(1)
 
     # The following connections are performed through the RSCP interface
     wait = config["interval"]["general"]
