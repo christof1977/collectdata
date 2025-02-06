@@ -40,23 +40,28 @@ if( __name__ == "__main__"):
             config = json.load(conffile)
 
     logger.info("Starting E3DC data collection")
-    try:
-        e3dc = E3DC(E3DC.CONNECT_LOCAL,
-                    username = config["e3dc"]["user"],
-                    password = config["e3dc"]["pass"],
-                    ipAddress = config["e3dc"]["host"],
-                    key = config["e3dc"]["key"],
-                    configuration = config["e3dc"]["config"])
-        logger.info("Established connection to S10")
-    except:
-        logger.error("Connection to S10 failed! Exiting.")
-        exit()
+    e3dcconn = False
+    while e3dcconn == False:
+        try:
+            e3dc = E3DC(E3DC.CONNECT_LOCAL,
+                        username = config["e3dc"]["user"],
+                        password = config["e3dc"]["pass"],
+                        ipAddress = config["e3dc"]["host"],
+                        key = config["e3dc"]["key"],
+                        configuration = config["e3dc"]["config"])
+            logger.info("Established connection to S10")
+            e3dcconn = True
+        except:
+            logger.error("Connection to S10 failed! Trying again in 5 seconds.")
+            sleep(5)
+
+            #exit()
 
     with open(config["e3dc"]["mapfile"]) as mapfile:
         mapping = json.load(mapfile)
         flat_map = get_item(mapping)
 
-    mqtt_successful = False 
+    mqtt_successful = False
     while mqtt_successful is not True:
         try:
             mqttclient = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, config["mqtt"]["client"])
@@ -78,43 +83,46 @@ if( __name__ == "__main__"):
     while True:
         values = {}
 
-        pollinger = get_item(e3dc.poll(keepAlive=True))
-        for rec in pollinger:
-            # Find MQTT topic for measured value in flat_map
-            try:
-                key = [k for k, v in flat_map.items() if v == rec][0]
-                values[key] = pollinger[rec]
-            except:
-                pass
+        try:
+            pollinger = get_item(e3dc.poll(keepAlive=True))
+            for rec in pollinger:
+                # Find MQTT topic for measured value in flat_map
+                try:
+                    key = [k for k, v in flat_map.items() if v == rec][0]
+                    values[key] = pollinger[rec]
+                except:
+                    pass
 
-        pvi = get_item(e3dc.get_pvi_data(keepAlive=True))
-        for rec in pvi:
-            # Find MQTT topic for measured value in flat_map
-            try:
-                key = [k for k, v in flat_map.items() if v == rec][0]
-                values[key] = pvi[rec]
-            except:
-                pass
+            pvi = get_item(e3dc.get_pvi_data(keepAlive=True))
+            for rec in pvi:
+                # Find MQTT topic for measured value in flat_map
+                try:
+                    key = [k for k, v in flat_map.items() if v == rec][0]
+                    values[key] = pvi[rec]
+                except:
+                    pass
 
-        pm = get_item(e3dc.get_powermeter_data(6, keepAlive=True))
-        for rec in pm:
-            # Find MQTT topic for measured value in flat_map
-            try:
-                key = [k for k, v in flat_map.items() if v == rec][0]
-                values[key] = pm[rec]
-            except:
-                pass
+            pm = get_item(e3dc.get_powermeter_data(6, keepAlive=True))
+            for rec in pm:
+                # Find MQTT topic for measured value in flat_map
+                try:
+                    key = [k for k, v in flat_map.items() if v == rec][0]
+                    values[key] = pm[rec]
+                except:
+                    pass
 
-        bat_data  = e3dc.get_batteries_data(keepAlive=True)
-        for list_item in bat_data: # list iteration required, because get_batteries_data returns list
-            battery = get_item(list_item)
-        for rec in battery:
-            # Find MQTT topic for measured value in flat_map
-            try:
-                key = [k for k, v in flat_map.items() if v == rec][0]
-                values[key] = battery[rec]
-            except:
-                pass
+            bat_data  = e3dc.get_batteries_data(keepAlive=True)
+            for list_item in bat_data: # list iteration required, because get_batteries_data returns list
+                battery = get_item(list_item)
+            for rec in battery:
+                # Find MQTT topic for measured value in flat_map
+                try:
+                    key = [k for k, v in flat_map.items() if v == rec][0]
+                    values[key] = battery[rec]
+                except:
+                    pass
+        except:
+            logging.error("S10 not available. Doing nothing.")
         sleep(2)
 
         for key in values:
