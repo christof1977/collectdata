@@ -184,9 +184,12 @@ class DailyReport(object):
         for table in result:
             for record in table:
                 pwr = "{:.2f}".format(record["_value"]*1000)
-        logging.info("Solarertrag: {}kWh".format(pwr))
-        if(self.write_maria):
-            self.maria.write_day(start_date, "Solarertrag", pwr)
+        try:
+            logging.info("Solarertrag: {}kWh".format(pwr))
+            if(self.write_maria):
+                self.maria.write_day(start_date, "Solarertrag", pwr)
+        except:
+            logging.info("No Solarertragvalue in Database")
         return result
 
     def update_pellet_consumption(self, day=None):
@@ -265,6 +268,10 @@ class DailyReport(object):
                     value = round(record.get_value(), 2)
             start_date, end_date = datevalues.date_values(day)
             #logging.info("NEW Calculating {} of day and writing value to daily table".format(key))
+            try: # test, if variable value exists, of not, set it to 0
+                tmp = type(value)
+            except UnboundLocalError:
+                value = 0
             logging.info("{}: {}kWh (neu)".format(key, value))
             if(self.write_maria):
                 self.maria.write_day(start_date, key, value)
