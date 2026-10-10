@@ -50,11 +50,14 @@ class DailyReport(object):
             logging.error("Configuration error")
             logging.error(e)
 
-    def influx_raw_query(self, parameter, fil=None, day=None):
+    def influx_raw_query(self, measurement, tag, fil=None, day=None, bucket=None):
+        if bucket is None:
+            bucket = self.influxbucket
         start_date, end_date = datevalues.date_values_influx(day)
-        query = 'from(bucket: "'+ self.influxbucket +'") \
+        query = 'from(bucket: "'+ bucket +'") \
                 |> range(start:'+start_date+', stop: '+ end_date+') \
-                      |> filter(fn: (r) => r["topic"] == "'+parameter+'" and r["_field"] == "value")'
+                |> filter(fn: (r) => r["_measurement"] == "' + measurement + '") \
+                |> filter(fn: (r) => r["tag"] == "' + tag + '")'
         if(fil in ["pos", "neg"]):
             if(fil=="pos"):
                 query = query + '|> filter(fn: (r) => r["_value"] > 0.0)'
@@ -200,7 +203,7 @@ class DailyReport(object):
         '''
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
-        query = self.influx_raw_query("oekofen/pe1/L_storage_popper", day=day)
+        query = self.influx_raw_query("oekofen", "L_storage_popper", day=day, bucket="oekofen")
         result = query_api.query(query)
         val = [0]
         for record in result:
