@@ -89,15 +89,15 @@ class DailyReport(object):
                       |> aggregateWindow(fn: sum, every: 1mo) '
         return query
 
-    def influx_energy_query(self, parameter, number=None, fil=None, day=None, bucket=None):
+    def influx_energy_query(self, device, parameter, fil=None, day=None, bucket=None):
         if bucket is None:
             bucket = self.influxbucket
         start_date, end_date = datevalues.date_values_influx(day)
         query = 'from(bucket: "{}") \
                  |> range(start:{}, stop: {}) \
-                 |> filter(fn: (r) => r["tag"] == "{}" and r["_field"] == "value")'.format(bucket, start_date, end_date, parameter)
-        if number is not None:
-            query = '{} |> filter(fn: (r) => r["id"] == "{}")'.format(query, number)
+                 |> filter(fn: (r) => r["device"] == "{}" and r["_field"] == "{}")'.format(bucket, start_date, end_date, device, parameter)
+        #if number is not None:
+        #    query = '{} |> filter(fn: (r) => r["id"] == "{}")'.format(query, number)
         if(fil in ["pos", "neg"]):
             if(fil=="pos"):
                 fil = '|> filter(fn: (r) => r["_value"] >= 0.0)'
@@ -183,7 +183,7 @@ class DailyReport(object):
         start_date, end_date = datevalues.date_values(day)
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
-        result = query_api.query(self.influx_energy_query("L_pwr", bucket="oekofen", day=day))
+        result = query_api.query(self.influx_energy_query("se2", "L_pwr", day=day))
         for table in result:
             for record in table:
                 pwr = "{:.2f}".format(record["_value"]*1000)
@@ -203,7 +203,7 @@ class DailyReport(object):
         '''
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
-        query = self.influx_raw_query("oekofen", "L_storage_popper", day=day, bucket="oekofen")
+        query = self.influx_raw_query("oekofen", "L_storage_popper", day=day)
         result = query_api.query(query)
         val = [0]
         for record in result:
@@ -225,39 +225,25 @@ class DailyReport(object):
         if(self.write_maria):
             self.maria.write_day(start_date, "VerbrauchPellets", verbrauch)
 
-    def influx_calc_energy(self, day=None):
-        client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
-        query_api = client.query_api()
-        start_date, end_date = datevalues.date_values_influx(day)
-        return
-        query = 'from(bucket: "'+ self.influxbucket +'") \
-                |> range(start:'+start_date+', stop: '+ end_date+') \
-                      |> filter(fn: (r) => r["topic"] == "E3DC/EMS_DATA/EMS_POWER_HOME" and r["_field"] == "value")'
-        result = query_api.query(query)
-        for table in result:
-            for record in table:
-                print(record)
-
     def update_electrical(self, day=None):
         client = InfluxDBClient(url=self.influxserv, token=self.influxtoken, org=self.influxorg)
         query_api = client.query_api()
-        parameter = {"VerbrauchStromHaus":{"bucket":"e3dc","par":"EMS_POWER_HOME","filter":None},
-                "PVErtragAc":{"bucket":"e3dc","par":"EMS_POWER_PV","filter":None},
-                "PVErtragDcOst":{"bucket":"e3dc","par":"PVI_DC_POWER","id":0,"filter":None},
-                "PVErtragDcWest":{"bucket":"e3dc","par":"PVI_DC_POWER","id":1,"filter":None},
-                "Netzbezug":{"bucket":"e3dc","par":"EMS_POWER_GRID","filter":"pos"},
-                "Netzeinspeisung":{"bucket":"e3dc","par":"EMS_POWER_GRID","filter":"neg"},
-                "Batterieladung":{"bucket":"e3dc","par":"EMS_POWER_BAT","filter":"pos"},
-                "Batterieentladung":{"bucket":"e3dc","par":"EMS_POWER_BAT","filter":"neg"}}
+        parameter = {"VerbrauchStromHaus":{"device":"master","par":"home_raw","filter":None},
+                     "PVErtragAcMaster":{"device":"master","par":"pv_total_w","filter":None},
+                     "PVErtragDcOst":{"device":"master","par":"dc0_w","filter":None},
+                     "PVErtragDcWest":{"device":"master","par":"dc1_w","filter":None},
+                     "PVErtragDcGarage":{"device":"slave","par":"dc0_w","filter":None},
+                     "Netzbezug":{"device":"master","par":"grid","filter":"pos"},
+                     "Netzeinspeisung":{"device":"master","par":"grid","filter":"neg"},
+                     "BatterieladungMaster":{"device":"master","par":"bat","filter":"pos"},
+                     "BatterieentladungMaster":{"device":"master","par":"bat","filter":"neg"},
+                     "BatterieladungSlave":{"device":"slave","par":"bat","filter":"pos"},
+                     "BatterieentladungSlave":{"device":"slave","par":"bat","filter":"neg"}}
         for key in parameter:
             try:
                 bucket = parameter[key]["bucket"]
             except:
                 bucket = self.influxbucket
-            try:
-                number = parameter[key]["id"]
-            except:
-                number = None
             #result = query_api.query(self.influx_query(parameter[key]["par"], fil=parameter[key]["filter"], number=number, day=day, bucket=bucket))
             #for table in result:
             #    for record in table:
@@ -265,7 +251,7 @@ class DailyReport(object):
             #start_date, end_date = datevalues.date_values(day)
             #logging.info("Calculating {} of day and writing value to daily table".format(key))
             #logging.info("{}: {}kWh".format(key, value))
-            result = query_api.query(self.influx_energy_query(parameter[key]["par"], fil=parameter[key]["filter"], number=number, day=day, bucket=bucket))
+            result = query_api.query(self.influx_energy_query(parameter[key]["device"], parameter[key]["par"], fil=parameter[key]["filter"], day=day, bucket=bucket))
             for table in result:
                 for record in table:
                     value = round(record.get_value(), 2)
@@ -292,7 +278,7 @@ class DailyReport(object):
         query_api = client.query_api()
         query = 'from(bucket: "{}") \
                 |> range(start: {}, stop: {}) \
-                |> filter(fn: (r) => r["tag"] == "{}") \
+                |> filter(fn: (r) => r["_field"] == "{}") \
                 |> aggregateWindow(every: 24h, fn: mean) \
                 |> yield(name: "mean")'.format(bucket, start_date, end_date, parameter)
         result = query_api.query(query)
@@ -311,8 +297,11 @@ class DailyReport(object):
     def calculate_daily_values(self, day):
         start_date, end_date = datevalues.date_values(day)
         day_before = start_date -  datetime.timedelta(days=1)
-        res_day = self.maria.read_daily_row(start_date)
-        res_day_before = self.maria.read_daily_row(day_before)
+        try:
+            res_day = self.maria.read_daily_row(start_date)
+            res_day_before = self.maria.read_daily_row(day_before)
+        except UnboundLocalError:
+            logging.warning("Something went wrong. Maybe no daily entry so far?")
         parameter = ["HeizungEG", "HeizungDG", "Warmwasser", "Gartenwasser",  "StromEg", "StromOg", "StromAllg"]
         for par in parameter:
             try:
@@ -338,7 +327,7 @@ class DailyReport(object):
         logging.info(" ")
         self.update_pellet_consumption(day=day)
         logging.info(" ")
-        self.update_daily_average_temp("L_ambient", bucket="oekofen", day=day)
+        self.update_daily_average_temp("L_ambient", day=day)
         logging.info(" ")
         self.update_electrical(day=day)
         logging.info(" ")
@@ -434,12 +423,10 @@ if __name__ == "__main__":
         dr.calculate_daily_values(day=day)
 
     if(average_temp):
-        dr.update_daily_average_temp("L_ambient", bucket="oekofen", day=day)
+        dr.update_daily_average_temp("L_ambient", day=day)
 
     if(energy):
         dr.update_electrical(day=day)
-
-    #dr.influx_calc_energy("2022-02-19")
 
 
     #start_date = datetime.date(2022,11,10)
