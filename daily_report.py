@@ -57,7 +57,7 @@ class DailyReport(object):
         query = 'from(bucket: "'+ bucket +'") \
                 |> range(start:'+start_date+', stop: '+ end_date+') \
                 |> filter(fn: (r) => r["_measurement"] == "' + measurement + '") \
-                |> filter(fn: (r) => r["tag"] == "' + tag + '")'
+                |> filter(fn: (r) => r["_field"] == "' + tag + '")'
         if(fil in ["pos", "neg"]):
             if(fil=="pos"):
                 query = query + '|> filter(fn: (r) => r["_value"] > 0.0)'
