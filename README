@@ -1,0 +1,2 @@
+set -a; source oekofen2mqtt.env; set +a
+python3 oekofen2mqtt.py
