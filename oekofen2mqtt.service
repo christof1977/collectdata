@@ -7,7 +7,6 @@ User=heizung
 Group=heizung
 UMask=007
 EnvironmentFile=/home/heizung/collectdata/oekofen2mqtt.env
-#ExecStart=/home/heizung/collectdata/env/bin/python3 /home/heizung/collectdata/oekofen2mqtt.py
 ExecStart=/usr/bin/python3 /home/heizung/collectdata/oekofen2mqtt.py
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure
