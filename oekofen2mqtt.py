@@ -195,7 +195,11 @@ def fetch_and_publish(client):
                 continue
 
             topic = f"{BASE_TOPIC}/{group}/{key}"
-            client.publish(topic, format_value(entry), retain=True)
+            retain = True
+            if key == "L_statetext":
+                retain=False
+            client.publish(topic, format_value(entry), retain=retain)
+
             published_count += 1
 
             if not key.startswith(READONLY_PREFIX):
